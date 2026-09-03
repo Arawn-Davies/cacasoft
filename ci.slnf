@@ -1,0 +1,10 @@
+{
+  "solution": {
+    "path": "Artemis IL.sln",
+    "projects": [
+      "source\\Artemis-VM\\Artemis_IL.csproj",
+      "source\\AIL-Runtime\\AIL-Runtime.csproj",
+      "source\\AIL-Tests\\AIL-Tests.csproj"
+    ]
+  }
+}

@@ -13,8 +13,8 @@ For the full language and VM specification, standard library reference, and inst
 | Path | Contents |
 |------|----------|
 | `/source/Artemis-VM` | Core VM library (netstandard2.0) — registers, RAM, instruction execution |
-| `/source/AIL-Runtime` | Command-line runtime host (net8.0) |
-| `/source/AIL-Studio` | WinForms IDE with assembler, decompiler, and step debugger (net8.0-windows) |
+| `/source/AIL-Runtime` | Command-line runtime host (net10.0) |
+| `/source/AIL-Studio` | WinForms IDE with assembler, decompiler, and step debugger (net10.0-windows) |
 | `/source/AIL-Tests` | xUnit test suite |
 | `/wiki` | Mirror of the GitHub Wiki pages |
 | `/LICENSES` | License texts for this project and its FOSS dependencies |
@@ -24,7 +24,7 @@ For the full language and VM specification, standard library reference, and inst
 
 ## Building
 
-Requires the [.NET 8 SDK](https://dotnet.microsoft.com/download).
+Requires the [.NET 10 SDK](https://dotnet.microsoft.com/download).
 
 ```sh
 # Build all projects
@@ -34,7 +34,7 @@ dotnet build "Artemis IL.sln"
 dotnet test source/AIL-Tests/AIL-Tests.csproj
 ```
 
-> **Note:** AIL-Studio targets `net8.0-windows` and will only build on Windows. The VM library, runtime, and tests build cross-platform.
+> **Note:** AIL-Studio targets `net10.0-windows` and will only build on Windows. The VM library, runtime, and tests build cross-platform.
 
 ---
 

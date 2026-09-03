@@ -43,7 +43,7 @@ The Artemis Intermediate Language (AIL) is a low-level, register-based intermedi
 
 ### Prerequisites
 
-- [.NET 8 SDK](https://dotnet.microsoft.com/download)
+- [.NET 10 SDK](https://dotnet.microsoft.com/download)
 - Windows (for AIL Studio only; the VM library and runtime are cross-platform)
 
 ### Build

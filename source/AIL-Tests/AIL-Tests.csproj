@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <IsPackable>false</IsPackable>
     <Nullable>enable</Nullable>
     <ImplicitUsings>disable</ImplicitUsings>
@@ -21,7 +21,7 @@
     <ProjectReference Include="..\Artemis-VM\Artemis_IL.csproj" />
   </ItemGroup>
 
-  <!-- Link Compiler source files without pulling in WinForms (AIL-Studio is net8.0-windows) -->
+  <!-- Link Compiler source files without pulling in WinForms (AIL-Studio is net10.0-windows) -->
   <ItemGroup>
     <Compile Include="..\AIL-Studio\Compiler\AddressModes.cs" />
     <Compile Include="..\AIL-Studio\Compiler\BuildException.cs" />
