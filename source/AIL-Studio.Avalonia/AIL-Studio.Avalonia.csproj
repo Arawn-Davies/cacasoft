@@ -20,14 +20,15 @@
     <PackageReference Include="Avalonia.Desktop" Version="11.3.20" />
     <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.20" />
     <PackageReference Include="Avalonia.Fonts.Inter" Version="11.3.20" />
-    <!-- Avalonia.Diagnostics (F12 dev-tools overlay) deliberately left out of the MVP —
-         not needed yet, and it's a Debug-only dependency not worth adding before it's
-         used. Now that the whole project sits on the matching 11.3.20 line, re-adding it
-         later is a one-line change:
-         <PackageReference Include="Avalonia.Diagnostics" Version="11.3.20" Condition="'$(Configuration)' == 'Debug'" />
-         then call this.AttachDevTools() in App.axaml.cs's OnFrameworkInitializationCompleted,
-         guarded by #if DEBUG. -->
-    <PackageReference Include="Avalonia.AvaloniaEdit" Version="11.4.1" />
+    <!-- Debug-only, temporary: added to diagnose the blank-TextEditor rendering bug via
+         the live Visual Tree inspector (F12). Remove once that's resolved, per the
+         earlier decision to keep it out of the MVP otherwise. -->
+    <PackageReference Include="Avalonia.Diagnostics" Version="11.3.20" Condition="'$(Configuration)' == 'Debug'" />
+    <!-- Pinned to the 11.3.x line to match the Avalonia core packages above — this
+         package's version numbers track Avalonia's own release numbers, and a
+         higher AvaloniaEdit (11.4.1) against a lower core (11.3.20) rendered nothing
+         at all (blank editor, no exceptions) despite correct layout/bounds/visibility. -->
+    <PackageReference Include="Avalonia.AvaloniaEdit" Version="11.3.0" />
   </ItemGroup>
 
   <ItemGroup>

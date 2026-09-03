@@ -33,6 +33,10 @@ namespace AIL_Studio_Avalonia.Views
         };
 
         private string? _filePath;
+        // Display-only name shown in the title/status bar for content that isn't backed by
+        // a real file on disk (embedded examples) — kept separate from _filePath so Save
+        // still correctly prompts via SaveAs rather than silently writing over nothing.
+        private string? _displayName;
         private bool _modified;
         private Window? _consoleDockWindow;
         private bool _closeConfirmed;
@@ -49,22 +53,26 @@ namespace AIL_Studio_Avalonia.Views
             AddHandler(KeyDownEvent, OnWindowKeyDown, RoutingStrategies.Tunnel);
             Closing += OnWindowClosing;
             // TextArea (and its own TextView, a further-nested templated part of
-            // TextEditor's control template) only exist once the template actually applies —
-            // TemplateApplied is the precise signal for that.
-            Editor.TemplateApplied += OnEditorTemplateApplied;
-        }
-
-        private void OnEditorTemplateApplied(object? sender, Avalonia.Controls.Primitives.TemplateAppliedEventArgs e)
-        {
-            Editor.TemplateApplied -= OnEditorTemplateApplied;
-
-            Editor.TextArea.TextView.LineTransformers.Add(new AilSyntaxColorizer());
+            // TextEditor's control template) are already valid here — InitializeComponent()
+            // builds the whole tree, including template application, synchronously.
+            // TEMPORARILY DISABLED for diagnosis: testing whether this custom transformer is
+            // silently breaking AvaloniaEdit's render pipeline (nothing paints — not preloaded
+            // text, not line numbers, not even live-typed characters — despite correct
+            // Bounds/IsVisible and zero exceptions surfaced).
+            // Editor.TextArea.TextView.LineTransformers.Add(new AilSyntaxColorizer());
             Editor.TextArea.IndentationStrategy = new DefaultIndentationStrategy();
             Editor.TextArea.Caret.PositionChanged += (_, _) => UpdateStatusPosition();
 
             Editor.Text = LoadEmbeddedExample("calculator.ail");
+            _displayName = "calculator.ail";
             _modified = false;
             UpdateTitle();
+
+            Opened += (_, _) => Console.WriteLine(
+                $"[DIAG] Editor.Text.Length={Editor.Text?.Length ?? -1} " +
+                $"Editor.Bounds={Editor.Bounds} Editor.IsVisible={Editor.IsVisible} " +
+                $"Editor.IsEffectivelyVisible={Editor.IsEffectivelyVisible} " +
+                $"SplitGrid.Bounds={SplitGrid.Bounds}");
         }
 
         // ── Keyboard shortcuts ──────────────────────────────────────────────────
@@ -104,6 +112,7 @@ namespace AIL_Studio_Avalonia.Views
             if (!await ConfirmDiscardIfModified()) return;
             Editor.Text = string.Empty;
             _filePath = null;
+            _displayName = null;
             _modified = false;
             UpdateTitle();
         }
@@ -124,6 +133,7 @@ namespace AIL_Studio_Avalonia.Views
             using var reader = new StreamReader(stream);
             Editor.Text = await reader.ReadToEndAsync();
             _filePath = files[0].TryGetLocalPath();
+            _displayName = null;
             _modified = false;
             UpdateTitle();
         }
@@ -157,6 +167,7 @@ namespace AIL_Studio_Avalonia.Views
 
             await File.WriteAllTextAsync(path, Editor.Text);
             _filePath = path;
+            _displayName = null;
             _modified = false;
             UpdateTitle();
         }
@@ -166,6 +177,7 @@ namespace AIL_Studio_Avalonia.Views
             if (!await ConfirmDiscardIfModified()) return;
             Editor.Text = LoadEmbeddedExample(resourceName);
             _filePath = null;
+            _displayName = resourceName;
             _modified = false;
             UpdateTitle();
         }
@@ -362,9 +374,11 @@ namespace AIL_Studio_Avalonia.Views
 
         private void UpdateTitle()
         {
-            string name = _filePath is null ? "Untitled" : Path.GetFileName(_filePath);
+            string name = _filePath is not null ? Path.GetFileName(_filePath)
+                : _displayName is not null ? _displayName
+                : "Untitled";
             Title = $"{(_modified ? "● " : string.Empty)}{name} — AIL Studio";
-            StatusFile.Text = _filePath ?? "New file";
+            StatusFile.Text = _filePath ?? _displayName ?? "New file";
         }
 
         private void UpdateStatusPosition()

@@ -5,6 +5,10 @@
 
   <Application.Styles>
     <FluentTheme />
+    <!-- Required — without this, TextEditor's Template stays null and nothing renders
+         (confirmed via DevTools: correct Bounds/Text/IsVisible, but no template applied,
+         so no visual chrome/content is ever painted, and no focus surface exists to type into). -->
+    <StyleInclude Source="avares://AvaloniaEdit/Themes/Fluent/AvaloniaEdit.xaml" />
   </Application.Styles>
 
   <Application.Resources>
