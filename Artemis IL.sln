@@ -1,7 +1,6 @@
-﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 18
-VisualStudioVersion = 18.4.11626.88
+VisualStudioVersion = 18.4.11626.88 stable
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Artemis_IL", "source\Artemis-VM\Artemis_IL.csproj", "{F2C5086A-4D10-4A00-82B9-173D7496249E}"
 EndProject
@@ -10,6 +9,8 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AIL-Studio", "source\AIL-Studio\AIL-Studio.csproj", "{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AIL-Tests", "source\AIL-Tests\AIL-Tests.csproj", "{FBF8F0E3-3890-4EDC-B94A-A8FF1A3B441B}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AIL-Studio.Maui", "source\AIL-Studio.Maui\AIL-Studio.Maui.csproj", "{641F4582-AD5D-44B6-B78E-876370388A36}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -33,6 +34,10 @@ Global
 		{FBF8F0E3-3890-4EDC-B94A-A8FF1A3B441B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{FBF8F0E3-3890-4EDC-B94A-A8FF1A3B441B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{FBF8F0E3-3890-4EDC-B94A-A8FF1A3B441B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{641F4582-AD5D-44B6-B78E-876370388A36}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{641F4582-AD5D-44B6-B78E-876370388A36}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{641F4582-AD5D-44B6-B78E-876370388A36}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{641F4582-AD5D-44B6-B78E-876370388A36}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
