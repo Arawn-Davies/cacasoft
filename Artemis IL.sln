@@ -10,6 +10,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AIL-Studio", "source\AIL-St
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AIL-Tests", "source\AIL-Tests\AIL-Tests.csproj", "{FBF8F0E3-3890-4EDC-B94A-A8FF1A3B441B}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AIL-Studio.Avalonia", "source\AIL-Studio.Avalonia\AIL-Studio.Avalonia.csproj", "{E6B224F7-8D99-4409-99CF-30496C8CBCB4}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -32,6 +34,10 @@ Global
 		{FBF8F0E3-3890-4EDC-B94A-A8FF1A3B441B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{FBF8F0E3-3890-4EDC-B94A-A8FF1A3B441B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{FBF8F0E3-3890-4EDC-B94A-A8FF1A3B441B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E6B224F7-8D99-4409-99CF-30496C8CBCB4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E6B224F7-8D99-4409-99CF-30496C8CBCB4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E6B224F7-8D99-4409-99CF-30496C8CBCB4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E6B224F7-8D99-4409-99CF-30496C8CBCB4}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

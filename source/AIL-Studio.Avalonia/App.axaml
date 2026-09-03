@@ -1,0 +1,41 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="AIL_Studio_Avalonia.App"
+             RequestedThemeVariant="Dark">
+
+  <Application.Styles>
+    <FluentTheme />
+  </Application.Styles>
+
+  <Application.Resources>
+    <!-- VS Code Dark+-derived palette, matching the WinForms AIL Studio's color scheme. -->
+    <Color x:Key="ColBackground">#FF1E1E1E</Color>
+    <Color x:Key="ColSidebar">#FF252526</Color>
+    <Color x:Key="ColToolbar">#FF2D2D30</Color>
+    <Color x:Key="ColDefaultText">#FFD4D4D4</Color>
+    <Color x:Key="ColLineNumFg">#FF858585</Color>
+    <Color x:Key="ColComment">#FF6A9955</Color>
+    <Color x:Key="ColMnemonic">#FF569CD6</Color>
+    <Color x:Key="ColRegister">#FF9CDCFE</Color>
+    <Color x:Key="ColNumber">#FFCE9178</Color>
+    <Color x:Key="ColLabel">#FFDCDCAA</Color>
+    <Color x:Key="ColOutputInfo">#FF9CDCFE</Color>
+    <Color x:Key="ColOutputSuccess">#FF6A9955</Color>
+    <Color x:Key="ColOutputError">#FFF44747</Color>
+    <Color x:Key="ColOutputBackground">#FF121212</Color>
+    <Color x:Key="ColSeparator">#FF3C3C3C</Color>
+    <Color x:Key="ColHover">#FF3F3F46</Color>
+    <Color x:Key="ColAccent">#FF007ACC</Color>
+
+    <SolidColorBrush x:Key="BrushBackground" Color="{StaticResource ColBackground}" />
+    <SolidColorBrush x:Key="BrushSidebar" Color="{StaticResource ColSidebar}" />
+    <SolidColorBrush x:Key="BrushToolbar" Color="{StaticResource ColToolbar}" />
+    <SolidColorBrush x:Key="BrushDefaultText" Color="{StaticResource ColDefaultText}" />
+    <SolidColorBrush x:Key="BrushLineNumFg" Color="{StaticResource ColLineNumFg}" />
+    <SolidColorBrush x:Key="BrushOutputBackground" Color="{StaticResource ColOutputBackground}" />
+    <SolidColorBrush x:Key="BrushSeparator" Color="{StaticResource ColSeparator}" />
+    <SolidColorBrush x:Key="BrushHover" Color="{StaticResource ColHover}" />
+    <SolidColorBrush x:Key="BrushAccent" Color="{StaticResource ColAccent}" />
+  </Application.Resources>
+
+</Application>
