@@ -186,9 +186,9 @@ namespace Artemis_IL
             else if (opcode == 0x10)
             {
                 if (opMode == AddressMode.RegReg || opMode == AddressMode.RegVal)
-                    PC = (byte)GetRegister(ram.memory[IP + 1]);
+                    PC = GetRegister(ram.memory[IP + 1]);
                 else
-                    PC = (byte)Get32BitParameter(IP + 2);
+                    PC = Get32BitParameter(IP + 2);
                 // No PC += 5 — PC is already the jump target; Execute() will do IP=PC, PC++
             }
 
@@ -199,15 +199,15 @@ namespace Artemis_IL
                 // Return address = address immediately after this 6-byte instruction
                 CallStack.Call(PC + 5);
                 if (opMode == AddressMode.RegReg || opMode == AddressMode.RegVal)
-                    PC = (byte)GetRegister(ram.memory[IP + 1]);
+                    PC = GetRegister(ram.memory[IP + 1]);
                 else
-                    PC = (byte)Get32BitParameter(IP + 2);
+                    PC = Get32BitParameter(IP + 2);
             }
 
             // RET — Return from subroutine (0x12)
             else if (opcode == 0x12)
             {
-                PC = (byte)CallStack.Return();
+                PC = CallStack.Return();
                 // No PC += 5 — PC is the saved return address
             }
 
@@ -217,9 +217,9 @@ namespace Artemis_IL
                 if (LastLogic)
                 {
                     if (opMode == AddressMode.RegReg || opMode == AddressMode.RegVal)
-                        PC = (byte)GetRegister(ram.memory[IP + 1]);
+                        PC = GetRegister(ram.memory[IP + 1]);
                     else
-                        PC = (byte)Get32BitParameter(IP + 2);
+                        PC = Get32BitParameter(IP + 2);
                 }
                 else
                     PC += 5;
@@ -231,9 +231,9 @@ namespace Artemis_IL
                 if (!LastLogic)
                 {
                     if (opMode == AddressMode.RegReg || opMode == AddressMode.RegVal)
-                        PC = (byte)GetRegister(ram.memory[IP + 1]);
+                        PC = GetRegister(ram.memory[IP + 1]);
                     else
-                        PC = (byte)Get32BitParameter(IP + 2);
+                        PC = Get32BitParameter(IP + 2);
                 }
                 else
                     PC += 5;
@@ -246,9 +246,9 @@ namespace Artemis_IL
                 {
                     CallStack.Call(PC + 5);
                     if (opMode == AddressMode.RegReg || opMode == AddressMode.RegVal)
-                        PC = (byte)GetRegister(ram.memory[IP + 1]);
+                        PC = GetRegister(ram.memory[IP + 1]);
                     else
-                        PC = (byte)Get32BitParameter(IP + 2);
+                        PC = Get32BitParameter(IP + 2);
                 }
                 else
                     PC += 5;
@@ -261,9 +261,9 @@ namespace Artemis_IL
                 {
                     CallStack.Call(PC + 5);
                     if (opMode == AddressMode.RegReg || opMode == AddressMode.RegVal)
-                        PC = (byte)GetRegister(ram.memory[IP + 1]);
+                        PC = GetRegister(ram.memory[IP + 1]);
                     else
-                        PC = (byte)Get32BitParameter(IP + 2);
+                        PC = Get32BitParameter(IP + 2);
                 }
                 else
                     PC += 5;

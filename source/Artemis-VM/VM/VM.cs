@@ -33,17 +33,18 @@ namespace Artemis_IL
 
 		#region registers
 		/// <summary>
-		/// Program Counter
+		/// Program Counter. Full-width (not byte) so code can address the entire RAM
+		/// segment (see <see cref="Globals.DefaultRamSize"/>) rather than wrapping at 256 bytes.
 		/// </summary>
-		public byte PC;
+		public int PC;
 		/// <summary>
 		/// Stack Pointer
 		/// </summary>
 		public byte SP;
 		/// <summary>
-		/// Instruction Pointer
+		/// Instruction Pointer. Full-width for the same reason as <see cref="PC"/>.
 		/// </summary>
-		public byte IP;
+		public int IP;
 		/// <summary>
 		/// Stack segment
 		/// </summary>

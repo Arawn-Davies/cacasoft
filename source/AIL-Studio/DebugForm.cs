@@ -264,7 +264,7 @@ namespace AIL_Studio
             _memBox.Clear();
 
             int codeEnd = _vm.ram.RAMLimit;
-            byte ip     = _vm.IP;
+            int ip      = _vm.IP;
 
             // Header
             int hs = _memBox.TextLength;

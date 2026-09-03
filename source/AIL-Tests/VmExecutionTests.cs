@@ -550,10 +550,6 @@ KEI 0x02
         /// that all four arithmetic operations execute correctly in the same executable.
         /// Each result is printed on its own line via KEI 0x01 AL=0x05 (write-integer mode).
         /// Expected output: "7\n7\n42\n5\nHalting!\n"
-        ///
-        /// Note: PC and IP are byte-sized registers (0–255), so the instruction pointer
-        /// wraps at 256 bytes regardless of RAM size. Each operation block uses 7
-        /// instructions (42 bytes), keeping the total program well within that limit.
         /// </summary>
         [Fact]
         public void Calculator_AllOperations_PrintsAllResults()
@@ -595,6 +591,32 @@ KEI 0x02
 ";
             CompileAndRun(source);
             Assert.Equal("7\n7\n42\n5\nHalting!\n", _console.Output);
+        }
+
+        /// <summary>
+        /// Regression test for the PC/IP byte-width bug: PC and IP were declared as
+        /// <c>byte</c> (max 255), so any program whose code exceeded ~256 bytes wrapped
+        /// the instruction pointer back to a misaligned offset mid-execution — either
+        /// truncating output silently or crashing on a garbage-decoded opcode.
+        /// This program compiles to 600 bytes of straight-line code (50 print pairs at
+        /// 12 bytes each), well past that former ceiling, and must run to completion.
+        /// </summary>
+        [Fact]
+        public void LargeProgram_ExceedingFormerByteAddressCeiling_ExecutesWithoutCorruption()
+        {
+            const int count = 50;
+            var source = new System.Text.StringBuilder();
+            source.AppendLine("MOV AL, 0x01"); // write-char mode, set once
+            for (int i = 0; i < count; i++)
+            {
+                source.AppendLine("MOV AH, 'X'");
+                source.AppendLine("KEI 0x01");
+            }
+            source.AppendLine("KEI 0x02");
+
+            CompileAndRun(source.ToString());
+
+            Assert.Equal(new string('X', count) + "Halting!\n", _console.Output);
         }
     }
 }

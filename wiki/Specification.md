@@ -77,8 +77,8 @@ The VM must provide the following registers. All are represented by a single byt
 
 | Register | Byte   | Width   | Description                                      |
 |----------|--------|---------|--------------------------------------------------|
-| `PC`     | `0xF0` | 8-bit   | Program Counter — address of the next instruction |
-| `IP`     | `0xF1` | 8-bit   | Instruction Pointer — current execution point    |
+| `PC`     | `0xF0` | 32-bit  | Program Counter — address of the next instruction |
+| `IP`     | `0xF1` | 32-bit  | Instruction Pointer — current execution point    |
 | `SP`     | `0xF2` | 8-bit   | Stack Pointer — top of stack (read-only)         |
 | `SS`     | `0xF3` | 8-bit   | Stack Segment — base address of the stack        |
 | `A`      | `0xF4` | 16-bit  | General purpose (composed of AL + AH)            |

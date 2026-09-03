@@ -32,6 +32,6 @@ namespace Artemis_IL
         /// diagnostic output (e.g. "KEI 0x01: ...") to <see cref="console"/>.
         /// Set to <c>false</c> for normal execution.
         /// </summary>
-        public static bool DebugMode = true;
+        public static bool DebugMode = false;
     }
 }
