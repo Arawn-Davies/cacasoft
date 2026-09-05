@@ -1,6 +1,6 @@
 # AIL Instructions — Program Flow, Reference & Quick Reference
 
-> Part of the [AIL Specification](Specification) — Version 2.0
+> Part of the [AIL Specification](Specification) — Version 2.1
 
 ---
 
@@ -36,16 +36,16 @@ HLT
 #### MOM — Move to Memory `0x3A`
 | | |
 |-|-|
-| **Parameters** | `[src: register or value]`, `[dest: memory address]` |
-| **Addressing modes** | `RegVal`, `ValVal` |
-| **Description** | Writes `src` to the memory address given by `dest`. |
+| **Parameters** | `[src: register or value]`, `[dest: memory address or register]` |
+| **Addressing modes** | `RegVal`, `ValVal`, `RegReg`, `ValReg` |
+| **Description** | Writes `src` to the memory address given by `dest`. When `dest` is a register (`RegReg`/`ValReg`), the address is that register's *runtime value* — register-indirect addressing, e.g. `MOM AL, X` stores `AL` at whatever address `X` currently holds, not at a literal baked into the instruction. When `dest` is a value (`RegVal`/`ValVal`), the address is a literal, as before. |
 
 #### MOE — Move from Memory `0x3B`
 | | |
 |-|-|
-| **Parameters** | `[dest: register]`, `[src: memory address]` |
-| **Addressing modes** | `ValVal` |
-| **Description** | Reads the byte at `src` in memory and places it into `dest`. |
+| **Parameters** | `[dest: register]`, `[src: memory address or register]` |
+| **Addressing modes** | `RegVal`, `RegReg` |
+| **Description** | Reads the byte at `src` in memory and places it into `dest` (always a register). When `src` is a register (`RegReg`), the address is that register's *runtime value* — register-indirect addressing, e.g. `MOE AH, X` loads from whatever address `X` currently holds. When `src` is a value (`RegVal`), the address is a literal, as before. |
 
 #### SWP — Swap `0x02`
 | | |
@@ -188,13 +188,26 @@ HLT
 | | |
 |-|-|
 | **Parameters** | `[dest: register, address, or label]` |
-| **Description** | Pushes the address of the next instruction onto the call stack, then jumps to `dest`. |
+| **Description** | Pushes the address of the next instruction onto the call stack, then jumps to `dest`. The call stack holds at most 255 nested calls (shared with `CLT`/`CLF`); exceeding that depth is a fatal error and a compliant VM must raise a clean diagnostic rather than corrupt state. |
 
 #### RET — Return `0x12`
 | | |
 |-|-|
 | **Parameters** | *(none)* |
-| **Description** | Pops the top of the call stack and resumes execution there. |
+| **Description** | Pops the top of the call stack and resumes execution there. Executing `RET` with nothing on the call stack (no matching `CLL`/`CLT`/`CLF`) is a fatal error and must raise a clean diagnostic. |
+
+```mermaid
+sequenceDiagram
+    participant Prog as Program
+    participant CS as Call stack
+    Prog->>CS: CLL sub  (push return address)
+    activate CS
+    Prog->>Prog: jump to sub
+    Note over Prog: ...executes sub's body...
+    Prog->>CS: RET  (pop return address)
+    deactivate CS
+    CS-->>Prog: resume at pushed address
+```
 
 #### JMT — Jump if True `0x13`
 | | |
@@ -228,13 +241,13 @@ HLT
 | | |
 |-|-|
 | **Parameters** | `[data: register or value]` |
-| **Description** | Pushes `data` onto the stack and decrements `SP`. |
+| **Description** | Decrements `SP`, then writes `data` at the new `SP`. The stack shares memory with the running program (see §4); a push that would land at or below the end of the loaded code is a fatal error and must raise a clean diagnostic rather than overwrite it. |
 
 #### POP — Pop `0x21`
 | | |
 |-|-|
 | **Parameters** | `[dest: register]` |
-| **Description** | Pops the top value off the stack into `dest` and increments `SP`. |
+| **Description** | Reads the value at `SP` into `dest`, then increments `SP`. Popping with an empty stack (`SP` already at the top of RAM) is a fatal error and must raise a clean diagnostic. |
 
 ---
 

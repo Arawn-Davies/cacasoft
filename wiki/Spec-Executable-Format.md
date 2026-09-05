@@ -1,6 +1,6 @@
 # AIL Executable Format
 
-> Part of the [AIL Specification](Specification) — Version 2.0
+> Part of the [AIL Specification](Specification) — Version 2.1
 
 ---
 

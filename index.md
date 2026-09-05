@@ -20,6 +20,6 @@ Source code is kept in the `/source/` folder. The `/wiki/` folder in this reposi
 | Project | Description |
 |---------|-------------|
 | `source/Artemis-VM` | Core VM library — netstandard2.0, usable from any .NET host |
-| `source/AIL-Runtime` | Command-line runtime — load and execute `.ila` files or raw bytecode |
+| `source/AIL-Runtime` | Command-line runtime — compiles and runs `.ail` source directly, or loads pre-compiled bytecode |
 | `source/AIL-Studio` | WinForms IDE — assembler, decompiler, and step-through debugger (Windows only) |
 | `source/AIL-Tests` | xUnit test suite covering the VM, assembler, and decompiler |

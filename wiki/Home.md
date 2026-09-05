@@ -35,7 +35,7 @@ The Artemis Intermediate Language (AIL) is a low-level, register-based intermedi
 | Project | Description |
 |---------|-------------|
 | `source/Artemis-VM` | Core VM library — netstandard2.0, usable from any .NET host |
-| `source/AIL-Runtime` | Command-line runtime — load and execute `.ila` files or raw bytecode |
+| `source/AIL-Runtime` | Command-line runtime — compiles and runs `.ail` source directly, or loads pre-compiled bytecode |
 | `source/AIL-Studio` | WinForms IDE — assembler, decompiler, and step-through debugger (Windows only) |
 | `source/AIL-Tests` | xUnit test suite covering the VM, assembler, and decompiler |
 
@@ -68,15 +68,15 @@ Prints "Hello, World!" using the built-in demo program encoded directly as AIL b
 
 ### Run a `.ail` file
 
-1. Open AIL Studio (`source/AIL-Studio`) on Windows.
-2. Open or type your AIL assembly source.
-3. Press **Build & Run** to assemble and execute, or **Debug** to step through instructions.
-
-Alternatively, assemble with AIL Studio and then pass the output `.ila` file to the runtime:
+The command-line runtime compiles and runs `.ail` source directly — no separate assemble step needed:
 
 ```sh
-dotnet run --project source/AIL-Runtime -- myprogram.ila
+dotnet run --project source/AIL-Runtime -- myprogram.ail
 ```
+
+A compile error is reported in `file(line,col): error AIL001: message` format and exits non-zero; anything else is loaded and executed as pre-compiled bytecode instead.
+
+On Windows, AIL Studio (`source/AIL-Studio`) additionally provides a full IDE: open or type your AIL assembly source, press **Build & Run** to assemble and execute, or **Debug** to step through instructions.
 
 
 

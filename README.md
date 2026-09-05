@@ -44,7 +44,10 @@ dotnet test source/AIL-Tests/AIL-Tests.csproj
 # Run the built-in "Hello, World!" demo
 dotnet run --project source/AIL-Runtime
 
-# Run an AIL assembly file (compile first with AIL Studio, or pass raw bytecode)
+# Compile and run a .ail source file directly
+dotnet run --project source/AIL-Runtime -- path/to/program.ail
+
+# Or run pre-compiled bytecode
 dotnet run --project source/AIL-Runtime -- path/to/program.ila
 ```
 

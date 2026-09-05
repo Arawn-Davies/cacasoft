@@ -1,4 +1,4 @@
-# AIL Specification — Version 2.0 (Cross-Platform Edition)
+# AIL Specification — Version 2.1 (Cross-Platform Edition)
 
 > This page is the normative specification for AIL-compliant virtual machines.
 > It supersedes all prior drafts. Platform-specific implementation guidance is provided in the appendices.
@@ -22,7 +22,7 @@
 
 ## Overview
 
-AIL defines a **16-bit, register-based virtual machine** with a fixed-width 6-byte instruction encoding. The specification is split across three pages:
+AIL defines a **register-based virtual machine** with a fixed-width 6-byte instruction encoding and 32-bit addressing. The specification is split across three pages:
 
 - **[[Spec-Architecture]]** — Memory model, instruction encoding, registers, and the stack (§1–§4)
 - **[[Spec-Instructions]]** — Program flow, full instruction reference, and opcode quick-reference table (§5–§7)
@@ -32,18 +32,27 @@ AIL defines a **16-bit, register-based virtual machine** with a fixed-width 6-by
 
 ## 1. Memory
 
-AIL defines a 16-bit address space providing 65,536 (64 KB) bytes of byte-addressable memory. All multi-byte values are stored in **little-endian** format. The address space is partitioned as follows:
+AIL's instruction encoding addresses memory with a full 32-bit value (see §2 — the Parameter 2 field), so the instruction set itself imposes no 64 KB ceiling. The reference VM allocates a configurable amount of byte-addressable RAM per instance — `Globals.DefaultRamSize` (currently 1 MB) unless a host constructs the VM with a different size — and a running program only ever sees whatever amount its host VM was given. All multi-byte values are stored in **little-endian** format. Within that allocated RAM, the address space is partitioned as follows:
 
-| Start    | End       | Purpose                                                   |
-|----------|-----------|-----------------------------------------------------------|
-| `0x0000` | `0x01FD`  | Interrupt Vector Table (IVT) — 255 × 2-byte entries       |
-| `0x01FE` | `0x01FF`  | Reserved                                                  |
-| `0x0200` | `SP − 1`  | General-purpose program memory (code and data)            |
-| `SP`     | `0xFFFF`  | Stack (grows downward from top of memory)                 |
+| Start    | End                     | Purpose                                                   |
+|----------|-------------------------|-----------------------------------------------------------|
+| `0x0000` | `0x01FD`                | Interrupt Vector Table (IVT) — 255 × 2-byte entries       |
+| `0x01FE` | `0x01FF`                | Reserved                                                  |
+| `0x0200` | `SP − 1`                | General-purpose program memory (code and data)            |
+| `SP`     | end of allocated RAM    | Stack (grows downward from the top of allocated RAM)      |
+
+```mermaid
+flowchart TD
+    A["0x0000 – 0x01FD\nInterrupt Vector Table\n(255 × 2-byte entries)"]
+    B["0x01FE – 0x01FF\nReserved"]
+    C["0x0200 – SP−1\nProgram memory\n(code and data)"]
+    D["SP – end of allocated RAM\nStack\n(grows downward)"]
+    A --> B --> C --> D
+```
 
 The IVT occupies the first 510 bytes (`0x0000`–`0x01FD`), providing space for 255 two-byte handler addresses. Bytes `0x01FE`–`0x01FF` are reserved for future use.
 
-The boundary between program memory and the stack is dynamic: the stack grows downward from the top of memory, controlled by the Stack Segment (SS) and Stack Pointer (SP) registers. Programs must not write into the stack region and the stack must not overflow into program memory.
+The boundary between program memory and the stack is dynamic: the stack grows downward from the top of the allocated RAM, controlled by the Stack Segment (SS) and Stack Pointer (SP) registers — both initialized to the top of RAM on startup (an empty stack). Programs must not write into the stack region and the stack must not overflow into program memory; the reference implementation enforces the latter by rejecting any write at or below the end of the loaded program (see §4).
 
 ---
 
@@ -56,7 +65,12 @@ Every AIL instruction is exactly **48 bits (6 bytes)** wide with the following f
 | 47–42  | 6 bits  | Opcode       | Identifies the instruction                           |
 | 41–40  | 2 bits  | Address Mode | How parameters are interpreted (see §2.1)            |
 | 39–32  | 8 bits  | Parameter 1  | First operand (register byte or immediate)           |
-| 31–0   | 32 bits | Parameter 2  | Second operand (register byte or 32-bit immediate)   |
+| 31–0   | 32 bits | Parameter 2  | Second operand (register byte, 32-bit immediate, or a memory address) |
+
+```mermaid
+flowchart LR
+    OP["Opcode\n6 bits\n(47–42)"] --> AM["Address\nMode\n2 bits\n(41–40)"] --> P1["Parameter 1\n8 bits\n(39–32)"] --> P2["Parameter 2\n32 bits\n(31–0)"]
+```
 
 ### 2.1 Addressing Modes
 
@@ -79,8 +93,8 @@ The VM must provide the following registers. All are represented by a single byt
 |----------|--------|---------|--------------------------------------------------|
 | `PC`     | `0xF0` | 32-bit  | Program Counter — address of the next instruction |
 | `IP`     | `0xF1` | 32-bit  | Instruction Pointer — current execution point    |
-| `SP`     | `0xF2` | 8-bit   | Stack Pointer — top of stack (read-only)         |
-| `SS`     | `0xF3` | 8-bit   | Stack Segment — base address of the stack        |
+| `SP`     | `0xF2` | 32-bit  | Stack Pointer — top of stack (read-only)         |
+| `SS`     | `0xF3` | 32-bit  | Stack Segment — base address of the stack        |
 | `A`      | `0xF4` | 16-bit  | General purpose (composed of AL + AH)            |
 | `AL`     | `0xF5` | 8-bit   | Lower byte of A                                  |
 | `AH`     | `0xF6` | 8-bit   | Higher byte of A                                 |
@@ -99,7 +113,9 @@ The VM must provide the following registers. All are represented by a single byt
 
 ## 4. The Stack
 
-The stack grows **downward** from the top of memory. Its base address is set by the Stack Segment (`SS`) register, which the program may configure; the VM sets a sensible default on startup. The Stack Pointer (`SP`) tracks the current top of the stack and is updated automatically by `PSH` and `POP`.
+The stack grows **downward** from the top of the allocated RAM and lives in the same shared address space as program code and data — there is no separate stack memory. Its base address is set by the Stack Segment (`SS`) register, which the program may configure; the VM initializes both `SS` and `SP` to the top of RAM on startup (an empty stack). The Stack Pointer (`SP`) tracks the current top of the stack and is updated automatically by `PSH` and `POP`.
+
+Because the stack shares memory with the running program, an unbounded sequence of pushes (or of nested `CLL`/`CLT`/`CLF` calls, which push return addresses via a separate 255-entry call stack — see §6.4) must eventually be stopped before it corrupts the loaded code. A compliant VM must reject a stack write that would land at or below the end of the loaded program with a diagnostic, rather than silently overwriting code or reading/writing outside the allocated RAM.
 
 ---
 
@@ -135,16 +151,16 @@ HLT
 #### MOM — Move to Memory `0x3A`
 | | |
 |-|-|
-| **Parameters** | `[src: register or value]`, `[dest: memory address]` |
-| **Addressing modes** | `RegVal`, `ValVal` |
-| **Description** | Writes `src` to the memory address given by `dest`. |
+| **Parameters** | `[src: register or value]`, `[dest: memory address or register]` |
+| **Addressing modes** | `RegVal`, `ValVal`, `RegReg`, `ValReg` |
+| **Description** | Writes `src` to the memory address given by `dest`. When `dest` is a register (`RegReg`/`ValReg`), the address is that register's *runtime value* — register-indirect addressing, e.g. `MOM AL, X` stores `AL` at whatever address `X` currently holds, not at a literal baked into the instruction. When `dest` is a value (`RegVal`/`ValVal`), the address is a literal, as before. |
 
 #### MOE — Move from Memory `0x3B`
 | | |
 |-|-|
-| **Parameters** | `[dest: register]`, `[src: memory address]` |
-| **Addressing modes** | `ValVal` |
-| **Description** | Reads the byte at `src` in memory and places it into `dest`. |
+| **Parameters** | `[dest: register]`, `[src: memory address or register]` |
+| **Addressing modes** | `RegVal`, `RegReg` |
+| **Description** | Reads the byte at `src` in memory and places it into `dest` (always a register). When `src` is a register (`RegReg`), the address is that register's *runtime value* — register-indirect addressing, e.g. `MOE AH, X` loads from whatever address `X` currently holds. When `src` is a value (`RegVal`), the address is a literal, as before. |
 
 #### SWP — Swap `0x02`
 | | |
@@ -287,13 +303,26 @@ HLT
 | | |
 |-|-|
 | **Parameters** | `[dest: register, address, or label]` |
-| **Description** | Pushes the address of the next instruction onto the call stack, then jumps to `dest`. |
+| **Description** | Pushes the address of the next instruction onto the call stack, then jumps to `dest`. The call stack holds at most 255 nested calls (shared with `CLT`/`CLF`); exceeding that depth is a fatal error and a compliant VM must raise a clean diagnostic rather than corrupt state. |
 
 #### RET — Return `0x12`
 | | |
 |-|-|
 | **Parameters** | *(none)* |
-| **Description** | Pops the top of the call stack and resumes execution there. |
+| **Description** | Pops the top of the call stack and resumes execution there. Executing `RET` with nothing on the call stack (no matching `CLL`/`CLT`/`CLF`) is a fatal error and must raise a clean diagnostic. |
+
+```mermaid
+sequenceDiagram
+    participant Prog as Program
+    participant CS as Call stack
+    Prog->>CS: CLL sub  (push return address)
+    activate CS
+    Prog->>Prog: jump to sub
+    Note over Prog: ...executes sub's body...
+    Prog->>CS: RET  (pop return address)
+    deactivate CS
+    CS-->>Prog: resume at pushed address
+```
 
 #### JMT — Jump if True `0x13`
 | | |
@@ -327,13 +356,13 @@ HLT
 | | |
 |-|-|
 | **Parameters** | `[data: register or value]` |
-| **Description** | Pushes `data` onto the stack and decrements `SP`. |
+| **Description** | Decrements `SP`, then writes `data` at the new `SP`. The stack shares memory with the running program (see §4); a push that would land at or below the end of the loaded code is a fatal error and must raise a clean diagnostic rather than overwrite it. |
 
 #### POP — Pop `0x21`
 | | |
 |-|-|
 | **Parameters** | `[dest: register]` |
-| **Description** | Pops the top value off the stack into `dest` and increments `SP`. |
+| **Description** | Reads the value at `SP` into `dest`, then increments `SP`. Popping with an empty stack (`SP` already at the top of RAM) is a fatal error and must raise a clean diagnostic. |
 
 ---
 
