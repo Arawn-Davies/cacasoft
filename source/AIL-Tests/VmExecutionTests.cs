@@ -1,4 +1,5 @@
 using System;
+using System.Threading.Tasks;
 using Xunit;
 using Artemis_IL;
 using AIL_Studio.Compiler;
@@ -22,7 +23,7 @@ namespace AIL_Tests
         /// Compiles <paramref name="source"/>, loads it into a fresh VM and executes it.
         /// Returns the VM so callers can inspect registers.
         /// </summary>
-        private VM CompileAndRun(string source)
+        private VM CompileAndRun(string source, int ramSize = Globals.DefaultRamSize)
         {
             byte[] code = new Compiler(source).Compile();
 
@@ -30,7 +31,7 @@ namespace AIL_Tests
             Artemis_IL.Globals.DebugMode = false;
             _console.Reset();
 
-            var vm = new VM(code, Globals.DefaultRamSize);
+            var vm = new VM(code, ramSize);
             vm.Execute();
             return vm;
         }
@@ -617,6 +618,147 @@ KEI 0x02
             CompileAndRun(source.ToString());
 
             Assert.Equal(new string('X', count) + "Halting!\n", _console.Output);
+        }
+
+        // ── Call stack / subroutines (CLL/RET) ──────────────────────────────────
+
+        /// <summary>
+        /// Regression test for the CallStack off-by-one bug: Call() wrote at stc_index
+        /// then incremented; Return() read at stc_index (already one past the last
+        /// write, since Call left it there) then decremented — so the first RET after
+        /// any CLL returned to address 0 instead of the pushed return address. Calls
+        /// the same subroutine TWICE: a fix that only handles a single CLL/RET pair
+        /// (e.g. reading the right slot but never restoring it for reuse) would still
+        /// pass a single-call test but fail this one.
+        /// </summary>
+        [Fact(Timeout = 5000)]
+        public async Task CallReturn_SecondCallAfterReturn_ExecutesSubroutineTwice()
+        {
+            const string source = @"
+JMP main
+sub:
+MOV AL, 0x01
+MOV AH, 'A'
+KEI 0x01
+RET
+main:
+CLL sub
+CLL sub
+KEI 0x02
+";
+            // Under the pre-fix bug this recurses into an infinite loop (RET always
+            // jumps to address 0, which re-executes "JMP main" forever) rather than
+            // throwing or returning wrong output — run off-thread so xUnit's Timeout
+            // can actually kill it instead of hanging the whole test run.
+            await Task.Run(() => CompileAndRun(source));
+            Assert.Equal("AAHalting!\n", _console.Output);
+        }
+
+        /// <summary>
+        /// Regression test for the call stack having no depth limit: recursing past
+        /// the 255-slot call stack must raise a clean, controlled diagnostic (matching
+        /// the house style established by RAM.SetByte's "attempted to overwrite its
+        /// own code" guard) rather than corrupting state via an unchecked array write.
+        /// </summary>
+        [Fact(Timeout = 5000)]
+        public async Task CallStack_ExceedingMaxDepth_ThrowsCleanDiagnostic()
+        {
+            const string source = @"
+sub:
+CLL sub
+";
+            var ex = await Assert.ThrowsAsync<Exception>(() => Task.Run(() => CompileAndRun(source)));
+            Assert.Contains("call stack", ex.Message, StringComparison.OrdinalIgnoreCase);
+        }
+
+        // ── Register-indirect memory addressing (MOM/MOE) ───────────────────────
+
+        /// <summary>
+        /// MOM/MOE register-indirect addressing: the destination/source address is
+        /// held in a register (X) at runtime rather than baked into the instruction
+        /// as a literal. Stores a byte at the address currently in X, then loads it
+        /// back through the same register.
+        /// </summary>
+        [Fact]
+        public void IndirectMemoryAccess_StoreAndLoadThroughRegister()
+        {
+            const string source = @"
+MOV X, 0x60
+MOV AL, 'Z'
+MOM AL, X
+MOE AH, X
+KEI 0x02
+";
+            VM vm = CompileAndRun(source);
+            Assert.Equal((byte)'Z', vm.AH);
+        }
+
+        /// <summary>
+        /// Proves the addressing is genuinely indirect (computed from the register's
+        /// runtime value), not just a second flavor of immediate: the same register
+        /// (X) is loaded with two DIFFERENT addresses in one run, and each store/load
+        /// pair must hit its own distinct location without aliasing the other. A bug
+        /// that used the register's ID byte as the address instead of its value would
+        /// make both stores land on the same location and fail this.
+        /// </summary>
+        [Fact]
+        public void IndirectMemoryAccess_TwoDifferentRegisterValues_AddressDistinctLocations()
+        {
+            const string source = @"
+MOV X, 0x60
+MOV AL, 'A'
+MOM AL, X
+MOV X, 0x70
+MOV AL, 'B'
+MOM AL, X
+MOV X, 0x60
+MOE AH, X
+MOV X, 0x70
+MOE BH, X
+KEI 0x02
+";
+            VM vm = CompileAndRun(source);
+            Assert.Equal((byte)'A', vm.AH);
+            Assert.Equal((byte)'B', vm.BH);
+        }
+
+        // ── Byte stack (PSH/POP) overflow ───────────────────────────────────────
+
+        /// <summary>
+        /// Regression test for folding the byte-stack into the shared address space
+        /// (previously an isolated, disconnected byte[256] buffer with no bounds
+        /// checking at all): pushing enough values to walk SP down past RAMLimit must
+        /// throw a clean diagnostic — the same guard RAM.SetByte already uses for
+        /// direct writes — instead of silently corrupting the loaded program's code.
+        /// Uses a small, explicit RAM size so a modest, non-looping number of PSH
+        /// instructions is enough to cross the boundary; Globals.DefaultRamSize (1 MB)
+        /// would need over a million pushes to reach the same effect.
+        /// </summary>
+        [Fact(Timeout = 5000)]
+        public async Task StackPush_OverflowingIntoCode_ThrowsCleanDiagnostic()
+        {
+            var source = new System.Text.StringBuilder();
+            source.AppendLine("MOV AL, 0x42");
+            for (int i = 0; i < 100; i++)
+                source.AppendLine("PSH AL");
+
+            var ex = await Assert.ThrowsAsync<Exception>(() => Task.Run(() => CompileAndRun(source.ToString(), ramSize: 626)));
+            Assert.Contains("overwrite its own code", ex.Message, StringComparison.OrdinalIgnoreCase);
+        }
+
+        /// <summary>
+        /// Regression test for POP with no corresponding PSH (stack underflow): must
+        /// throw a clean diagnostic rather than reading past the top of RAM.
+        /// </summary>
+        [Fact(Timeout = 5000)]
+        public async Task StackPop_WithEmptyStack_ThrowsCleanDiagnostic()
+        {
+            const string source = @"
+POP AL
+KEI 0x02
+";
+            var ex = await Assert.ThrowsAsync<Exception>(() => Task.Run(() => CompileAndRun(source)));
+            Assert.Contains("stack", ex.Message, StringComparison.OrdinalIgnoreCase);
         }
     }
 }

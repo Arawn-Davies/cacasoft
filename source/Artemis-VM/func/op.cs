@@ -302,7 +302,11 @@ namespace Artemis_IL
             // ── Stack Manipulation ────────────────────────────────────────────────
 
             // PSH — Push onto stack (0x20)
-            // Decrements SP, then writes data to _stackMemory[SP].
+            // Decrements SP, then writes through ram.SetByte — the stack lives in the
+            // shared address space (Spec-Architecture.md §4), growing down from the
+            // top of RAM, not in a separate isolated buffer. SetByte's existing
+            // RAMLimit guard (see RAM.cs) is what stops a runaway push from
+            // corrupting the loaded program's code; there is no separate check here.
             else if (opcode == 0x20)
             {
                 byte val;
@@ -311,15 +315,19 @@ namespace Artemis_IL
                 else
                     val = ram.memory[IP + 1];
                 SP--;
-                _stackMemory[SP] = val;
+                ram.SetByte(SP, val);
                 PC += 5;
             }
 
             // POP — Pop from stack (0x21)
-            // Reads from _stackMemory[SP], then increments SP.
+            // Reads through ram.GetByte, then increments SP. Throws on an empty stack
+            // (SP already at the top of RAM) rather than reading past the end of the
+            // allocated memory.
             else if (opcode == 0x21)
             {
-                byte val = _stackMemory[SP];
+                if (SP >= ram.memory.Length - 1)
+                    throw new Exception("POP was executed with an empty stack.");
+                byte val = ram.GetByte(SP);
                 SP++;
                 SetRegister(ram.memory[IP + 1], val);
                 PC += 5;
@@ -415,12 +423,19 @@ namespace Artemis_IL
             // ── Register & Memory Operations (continued) ──────────────────────────
 
             // MOM — Move to memory; write src to dest address (0x3A)
-            // Modes: RegVal (src=register, dest=address), ValVal (src=value, dest=address)
+            // Modes: RegVal/RegReg (src=register), ValVal/ValReg (src=value/literal);
+            // RegReg/ValReg additionally mean dest is register-indirect — the address
+            // is the register's runtime value (param2's byte), not a baked-in literal.
+            // These two axes (src kind, dest kind) are independent, so all four
+            // AddressMode combinations are meaningful here.
             else if (opcode == 0x3A)
             {
-                int destAddr = Get32BitParameter(IP + 2);
+                bool destIsRegister = (opMode == AddressMode.RegReg || opMode == AddressMode.ValReg);
+                int destAddr = destIsRegister
+                    ? GetRegister(ram.memory[IP + 2])
+                    : Get32BitParameter(IP + 2);
                 int srcVal;
-                if (opMode == AddressMode.RegVal)
+                if (opMode == AddressMode.RegVal || opMode == AddressMode.RegReg)
                     srcVal = GetRegister(ram.memory[IP + 1]);
                 else
                     srcVal = ram.memory[IP + 1];
@@ -429,10 +444,15 @@ namespace Artemis_IL
             }
 
             // MOE — Move from memory; read src address into dest register (0x3B)
-            // Mode: ValVal (dest=register byte in param1, src address in param2)
+            // dest (param1) is always a register. Mode RegVal: src is a literal
+            // address (existing behaviour). Mode RegReg: src is register-indirect —
+            // the address is the register named in param2's runtime value.
             else if (opcode == 0x3B)
             {
-                int srcAddr = Get32BitParameter(IP + 2);
+                bool srcIsRegister = (opMode == AddressMode.RegReg || opMode == AddressMode.ValReg);
+                int srcAddr = srcIsRegister
+                    ? GetRegister(ram.memory[IP + 2])
+                    : Get32BitParameter(IP + 2);
                 byte destReg = ram.memory[IP + 1];
                 SetRegister(destReg, ram.GetByte(srcAddr));
                 PC += 5;

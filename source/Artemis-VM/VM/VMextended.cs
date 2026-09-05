@@ -21,8 +21,8 @@ namespace Artemis_IL
 
         /// <summary>
         /// Writes <paramref name="Content"/> into the register identified by <paramref name="Register"/>.
-        /// PC and IP are full-width, like X/Y, so they can address the entire RAM segment.
-        /// 8-bit registers (SS, AL, AH, BL, BH, CL, CH) are truncated to their low byte.
+        /// PC, IP and SS are full-width, like X/Y, so they can address the entire RAM segment.
+        /// 8-bit registers (AL, AH, BL, BH, CL, CH) are truncated to their low byte.
         /// Writing to the composite registers A (0xF4), B (0xF7), or C (0xFA) splits the 16-bit value
         /// across the corresponding L/H byte pair via <see cref="SetSplit"/>.
         /// Writing to SP (0xF2) is silently ignored — SP is managed automatically by stack operations
@@ -38,7 +38,7 @@ namespace Artemis_IL
                 IP = Content;
             //0xF2 (Stack Pointer) is read only
             else if (Register == (byte)0xF3)
-                SS = (byte)Content;
+                SS = Content;
             else if (Register == (byte)0xF4)
                 SetSplit('A', Content);
             else if (Register == (byte)0xF5)
@@ -79,9 +79,9 @@ namespace Artemis_IL
             else if (Register == (byte)0xF1)
                 return IP;
             else if (Register == (byte)0xF2)
-                return (int)SP;
+                return SP;
             else if (Register == (byte)0xF3)
-                return (int)SS;
+                return SS;
             else if (Register == (byte)0xF4)
                 return GetSplit('A');
             else if (Register == (byte)0xF5)

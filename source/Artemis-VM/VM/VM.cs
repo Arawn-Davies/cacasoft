@@ -38,17 +38,20 @@ namespace Artemis_IL
 		/// </summary>
 		public int PC;
 		/// <summary>
-		/// Stack Pointer
+		/// Stack Pointer. Full-width, like PC/IP: it addresses the shared RAM segment
+		/// (the stack lives at the top of it, per Spec-Architecture.md §4), which can
+		/// exceed 255 bytes — a byte-wide SP could never reach most of it.
 		/// </summary>
-		public byte SP;
+		public int SP;
 		/// <summary>
 		/// Instruction Pointer. Full-width for the same reason as <see cref="PC"/>.
 		/// </summary>
 		public int IP;
 		/// <summary>
-		/// Stack segment
+		/// Stack Segment — base address of the stack. Full-width for the same reason
+		/// as <see cref="SP"/>.
 		/// </summary>
-		public byte SS;
+		public int SS;
 		/// <summary>
 		/// General purpose register
 		/// Lower byte of the A register
@@ -91,11 +94,7 @@ namespace Artemis_IL
 
         public bool Running = false;
 
-        /// <summary>
-        /// 256-byte stack memory. SP indexes into this array; grows downward from 0xFF.
-        /// </summary>
-        public byte[] _stackMemory = new byte[256];
-	
+
 		/// <summary>
 		/// Loads the application as a byte array into the virtual machine's memory
 		/// </summary>
@@ -130,8 +129,16 @@ namespace Artemis_IL
 			IP = 0;
 			// Sets the program counter to 1 (one ahead of IP)
 			PC = 1;
-			// Stack Pointer starts at 0xFF (top of 256-byte stack segment)
-			SP = 0xFF;
+			// SP starts at the top of the actual allocated RAM (an empty stack — the
+			// next PSH decrements before writing), growing down into the shared
+			// address space per Spec-Architecture.md §4. SS defaults to the same
+			// address ("a sensible default on startup", per the same section).
+			SP = ramsize - 1;
+			SS = ramsize - 1;
+			// CallStack is static (process-wide, not owned by any one VM instance —
+			// see CallStack.cs): reset it so this VM never inherits call-stack state
+			// left behind by a previous VM instance.
+			CallStack.Reset();
 			// Sets the parent virtual machine for the standard library to this instance
 			KernelInterrupts.ParentVM = this;
             SoftwareInterrupts.ParentVM = this;

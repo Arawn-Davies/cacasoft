@@ -189,17 +189,21 @@ namespace AIL_Studio
             // ── Stack ──────────────────────────────────────────────────────────
             _regBox.AppendText("\n");
             SectionHeader("  STACK");
+            // The stack lives at the top of the shared RAM segment (grows down from
+            // ram.memory.Length - 1), not a fixed 256-byte range — SP/the stack top
+            // can be well past two hex digits once ram is larger than 256 bytes.
             int sp = _vm.SP;
-            if (sp >= 0xFF)
+            int stackTop = _vm.ram.memory.Length - 1;
+            if (sp >= stackTop)
             {
                 Dim("  (empty)\n");
             }
             else
             {
-                for (int i = sp; i <= 0xFE; i++)
+                for (int i = sp; i <= stackTop; i++)
                 {
-                    Reg($"  [{i:X2}] ");
-                    Val($"0x{_vm._stackMemory[i]:X2}\n", false);
+                    Reg($"  [{i:X}] ");
+                    Val($"0x{_vm.ram.GetByte(i):X2}\n", false);
                 }
             }
 
