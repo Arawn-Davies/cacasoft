@@ -63,11 +63,32 @@
 
 		<!-- Raw Assets (also remove the "Resources\Raw" prefix) -->
 		<MauiAsset Include="Resources\Raw\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
+
+		<!-- Embed the shared example programs directly from /examples — single source of
+		     truth, no duplicated copies drifting out of sync (same approach the removed
+		     Avalonia attempt used). -->
+		<MauiAsset Include="..\..\examples\hello_world_db.ail" LogicalName="examples\hello_world_db.ail" />
+		<MauiAsset Include="..\..\examples\calculator.ail" LogicalName="examples\calculator.ail" />
 	</ItemGroup>
 
 	<ItemGroup>
 		<PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
 		<PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="10.0.0" />
+	</ItemGroup>
+
+	<!-- Link the compiler source files (pure logic, no WinForms dependency) directly from
+	     AIL-Studio, same pattern AIL-Tests and the removed Avalonia attempt used. -->
+	<ItemGroup>
+		<Compile Include="..\AIL-Studio\Compiler\AddressModes.cs" />
+		<Compile Include="..\AIL-Studio\Compiler\BuildException.cs" />
+		<Compile Include="..\AIL-Studio\Compiler\CharValue.cs" />
+		<Compile Include="..\AIL-Studio\Compiler\Compiler.cs" />
+		<Compile Include="..\AIL-Studio\Compiler\Instruction.cs" />
+		<Compile Include="..\AIL-Studio\Compiler\Registers.cs" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\Artemis-VM\Artemis_IL.csproj" />
 	</ItemGroup>
 
 </Project>
