@@ -1,6 +1,6 @@
-# AIL Instructions — Program Flow, Reference & Quick Reference
+# CIL Instructions — Program Flow, Reference & Quick Reference
 
-> Part of the [AIL Specification](Specification) — Version 2.1
+> Part of the [CIL Specification](Specification) — Version 2.1
 
 ---
 

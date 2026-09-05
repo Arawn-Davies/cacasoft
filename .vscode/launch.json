@@ -2,20 +2,20 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Launch AIL-Runtime (Debug)",
+            "name": "Launch Caca.VM.Cli (Debug)",
             "type": "dotnet",
             "request": "launch",
-            "projectPath": "${workspaceFolder}/source/AIL-Runtime/AIL-Runtime.csproj",
+            "projectPath": "${workspaceFolder}/source/Caca.VM.Cli/Caca.VM.Cli.csproj",
             "args": [],
             "cwd": "${workspaceFolder}",
             "console": "internalConsole",
             "stopAtEntry": false
         },
         {
-            "name": "Launch AIL-Runtime (Release)",
+            "name": "Launch Caca.VM.Cli (Release)",
             "type": "dotnet",
             "request": "launch",
-            "projectPath": "${workspaceFolder}/source/AIL-Runtime/AIL-Runtime.csproj",
+            "projectPath": "${workspaceFolder}/source/Caca.VM.Cli/Caca.VM.Cli.csproj",
             "args": [],
             "cwd": "${workspaceFolder}",
             "console": "internalConsole",
@@ -23,10 +23,10 @@
             "launchConfiguration": "Release"
         },
         {
-            "name": "Launch AIL-Studio (Debug, Windows)",
+            "name": "Launch Caca.VM.Studio (Debug, Windows)",
             "type": "dotnet",
             "request": "launch",
-            "projectPath": "${workspaceFolder}/source/AIL-Studio/AIL-Studio.csproj",
+            "projectPath": "${workspaceFolder}/source/Caca.VM.Studio/Caca.VM.Studio.csproj",
             "args": [],
             "cwd": "${workspaceFolder}",
             "console": "internalConsole",

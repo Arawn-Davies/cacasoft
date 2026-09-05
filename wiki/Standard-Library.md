@@ -1,6 +1,6 @@
 # Standard Library
 
-This page documents the built-in kernel interrupts provided by the AIL runtime. Invoke them with the `KEI` instruction (opcode `0x2B`).
+This page documents the built-in kernel interrupts provided by the CIL runtime. Invoke them with the `KEI` instruction (opcode `0x2B`).
 
 See [[Specification#67-interrupts]] for the `KEI` instruction encoding.
 

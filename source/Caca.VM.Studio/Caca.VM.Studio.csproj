@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <AssemblyName>Caca.VM.Studio</AssemblyName>
+    <RootNamespace>Caca.VM.Studio</RootNamespace>
+    <AssemblyTitle>Caca Studio</AssemblyTitle>
+    <AssemblyDescription>IDE for Caca Intermediate Language</AssemblyDescription>
+    <Company>Arawn-Davies</Company>
+    <Product>Caca Studio</Product>
+    <Copyright>Copyright © 2024</Copyright>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Caca.VM\Caca.VM.csproj" />
+  </ItemGroup>
+
+</Project>

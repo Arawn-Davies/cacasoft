@@ -36,7 +36,7 @@ jobs:
 
       - name: Run tests
         run: >
-          dotnet test source/AIL-Tests/AIL-Tests.csproj
+          dotnet test source/Caca.VM.Tests/Caca.VM.Tests.csproj
           --no-restore
           --configuration Release
           --logger "trx;LogFileName=test-results.trx"

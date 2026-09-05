@@ -1,8 +1,8 @@
-# Artemis-IL
+# CacaVM
 
 A free and open source register-based virtual machine and intermediate language targeting .NET Standard.
 
-Artemis-IL (AIL) provides a stable, portable compilation target with a small orthogonal instruction set, a two-pass assembler, a decompiler, and an integrated IDE (AIL Studio). The same AIL bytecode runs identically on any compliant VM implementation.
+CacaVM (CIL) provides a stable, portable compilation target with a small orthogonal instruction set, a two-pass assembler, a decompiler, and an integrated IDE (Caca Studio). The same CIL bytecode runs identically on any compliant VM implementation.
 
 For the full language and VM specification, standard library reference, and instruction set, see the **[GitHub Wiki](../../wiki)**.
 
@@ -12,13 +12,13 @@ For the full language and VM specification, standard library reference, and inst
 
 | Path | Contents |
 |------|----------|
-| `/source/Artemis-VM` | Core VM library (netstandard2.0) — registers, RAM, instruction execution |
-| `/source/AIL-Runtime` | Command-line runtime host (net10.0) |
-| `/source/AIL-Studio` | WinForms IDE with assembler, decompiler, and step debugger (net10.0-windows) |
-| `/source/AIL-Tests` | xUnit test suite |
+| `/source/Caca.VM` | Core VM library (netstandard2.0) — registers, RAM, instruction execution |
+| `/source/Caca.VM.Cli` | Command-line runtime host (net10.0) |
+| `/source/Caca.VM.Studio` | WinForms IDE with assembler, decompiler, and step debugger (net10.0-windows) |
+| `/source/Caca.VM.Tests` | xUnit test suite |
 | `/wiki` | Mirror of the GitHub Wiki pages |
 | `/LICENSES` | License texts for this project and its FOSS dependencies |
-| `/examples` | Sample `.ail` assembly programs |
+| `/examples` | Sample `.cil` assembly programs |
 
 ---
 
@@ -28,13 +28,13 @@ Requires the [.NET 10 SDK](https://dotnet.microsoft.com/download).
 
 ```sh
 # Build all projects
-dotnet build "Artemis IL.sln"
+dotnet build "CacaVM.sln"
 
 # Run the tests
-dotnet test source/AIL-Tests/AIL-Tests.csproj
+dotnet test source/Caca.VM.Tests/Caca.VM.Tests.csproj
 ```
 
-> **Note:** AIL-Studio targets `net10.0-windows` and will only build on Windows. The VM library, runtime, and tests build cross-platform.
+> **Note:** Caca.VM.Studio targets `net10.0-windows` and will only build on Windows. The VM library, runtime, and tests build cross-platform.
 
 ---
 
@@ -42,27 +42,27 @@ dotnet test source/AIL-Tests/AIL-Tests.csproj
 
 ```sh
 # Run the built-in "Hello, World!" demo
-dotnet run --project source/AIL-Runtime
+dotnet run --project source/Caca.VM.Cli
 
-# Compile and run a .ail source file directly
-dotnet run --project source/AIL-Runtime -- path/to/program.ail
+# Compile and run a .cil source file directly
+dotnet run --project source/Caca.VM.Cli -- path/to/program.cil
 
 # Or run pre-compiled bytecode
-dotnet run --project source/AIL-Runtime -- path/to/program.ila
+dotnet run --project source/Caca.VM.Cli -- path/to/program.ilc
 ```
 
 ---
 
 ## Examples
 
-The `/examples` folder contains ready-to-assemble `.ail` programs:
+The `/examples` folder contains ready-to-assemble `.cil` programs:
 
 | File | Description |
 |------|-------------|
-| `hello_world_db.ail` | Prints "Hello, World" using the `DB` pseudo-instruction and the write-string interrupt |
-| `calculator.ail` | Demonstrates arithmetic instructions and integer output |
+| `hello_world_db.cil` | Prints "Hello, World" using the `DB` pseudo-instruction and the write-string interrupt |
+| `calculator.cil` | Demonstrates arithmetic instructions and integer output |
 
-Open any `.ail` file in AIL Studio to assemble, run, and step-debug it interactively.
+Open any `.cil` file in Caca Studio to assemble, run, and step-debug it interactively.
 
 ---
 

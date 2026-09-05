@@ -1,12 +1,12 @@
-# AIL Architecture — Memory, Encoding, Registers & Stack
+# CIL Architecture — Memory, Encoding, Registers & Stack
 
-> Part of the [AIL Specification](Specification) — Version 2.1
+> Part of the [CIL Specification](Specification) — Version 2.1
 
 ---
 
 ## 1. Memory
 
-AIL's instruction encoding addresses memory with a full 32-bit value (see §2 — the Parameter 2 field), so the instruction set itself imposes no 64 KB ceiling. The reference VM allocates a configurable amount of byte-addressable RAM per instance — `Globals.DefaultRamSize` (currently 1 MB) unless a host constructs the VM with a different size — and a running program only ever sees whatever amount its host VM was given. All multi-byte values are stored in **little-endian** format. Within that allocated RAM, the address space is partitioned as follows:
+CIL's instruction encoding addresses memory with a full 32-bit value (see §2 — the Parameter 2 field), so the instruction set itself imposes no 64 KB ceiling. The reference VM allocates a configurable amount of byte-addressable RAM per instance — `Globals.DefaultRamSize` (currently 1 MB) unless a host constructs the VM with a different size — and a running program only ever sees whatever amount its host VM was given. All multi-byte values are stored in **little-endian** format. Within that allocated RAM, the address space is partitioned as follows:
 
 | Start    | End                     | Purpose                                                   |
 |----------|-------------------------|-----------------------------------------------------------|
@@ -32,7 +32,7 @@ The boundary between program memory and the stack is dynamic: the stack grows do
 
 ## 2. Instruction Encoding
 
-Every AIL instruction is exactly **48 bits (6 bytes)** wide with the following fixed layout:
+Every CIL instruction is exactly **48 bits (6 bytes)** wide with the following fixed layout:
 
 | Bits   | Width   | Field        | Description                                          |
 |--------|---------|--------------|------------------------------------------------------|
