@@ -6,8 +6,9 @@ namespace AIL_Runtime
 {
     /// <summary>
     /// Entry point for the AIL-Runtime command-line host.
-    /// Loads an AIL executable (raw bytecode or structured <c>.ila</c> file) and runs it
-    /// inside an <see cref="Artemis_IL.VM"/> instance with a 64 KB address space.
+    /// Compiles a <c>.ail</c> source file, or loads pre-compiled bytecode directly, and
+    /// runs it inside an <see cref="Artemis_IL.VM"/> instance sized by
+    /// <see cref="Artemis_IL.Globals.DefaultRamSize"/>.
     /// When invoked without arguments the built-in "Hello, World!" demo is executed.
     /// </summary>
     class Program
@@ -89,7 +90,9 @@ namespace AIL_Runtime
         /// <summary>
         /// Application entry point.
         /// If <paramref name="args"/> is empty, runs the built-in <see cref="HelloWorld"/> demo.
-        /// Otherwise treats <c>args[0]</c> as a file path, reads all bytes, and executes them.
+        /// Otherwise treats <c>args[0]</c> as a file path: a <c>.ail</c> file is compiled from
+        /// source (see <see cref="AIL_Studio.Compiler.Compiler"/>); anything else is read as
+        /// raw pre-compiled bytecode, as before.
         /// Any VM exception is caught, printed in red, and waits for a keypress before exiting.
         /// </summary>
         static void Main(string[] args)
@@ -100,6 +103,24 @@ namespace AIL_Runtime
             {
                 Console.Title = "Artemis-VM Runtime - Hello World!";
                 LoadedApplication = HelloWorld;
+            }
+            else if (args[0].EndsWith(".ail", StringComparison.OrdinalIgnoreCase))
+            {
+                string source = File.ReadAllText(args[0]);
+                try
+                {
+                    LoadedApplication = new AIL_Studio.Compiler.Compiler(source).Compile();
+                }
+                catch (AIL_Studio.Compiler.BuildException ex)
+                {
+                    // file(line,col): error CODE: message — MSBuild-style diagnostic
+                    // format, parseable by a $msCompile-style problem matcher.
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.WriteLine($"{args[0]}({ex.SrcLineNumber},1): error AIL001: {ex.Message}");
+                    Console.ResetColor();
+                    Environment.Exit(1);
+                    return;
+                }
             }
             else
             {
