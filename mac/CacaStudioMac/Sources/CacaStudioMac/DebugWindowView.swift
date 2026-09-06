@@ -17,7 +17,11 @@ struct DebugWindowView: View {
                 Text("No active debug session").foregroundStyle(.secondary)
             }
         }
-        .frame(minWidth: 900, minHeight: 600)
+        // The extra 360pt is only needed when a cacalang source pane is
+        // actually showing (see DebugSessionView.body) — a raw-CIL session
+        // shouldn't be forced wider than it needs to be just because SOME
+        // session might have a source pane.
+        .frame(minWidth: appState.debugSession?.cacalangSource != nil ? 1260 : 900, minHeight: 600)
     }
 }
 
@@ -37,6 +41,11 @@ private struct DebugSessionView: View {
                     Divider()
                     outputView
                         .frame(height: 150)
+                }
+                if session.cacalangSource != nil {
+                    Divider()
+                    sourceView
+                        .frame(width: 360)
                 }
             }
             Divider()
@@ -152,6 +161,51 @@ private struct DebugSessionView: View {
             .onChange(of: session.steps) {
                 if let current = session.memoryRows.first(where: { $0.isCurrent }) {
                     withAnimation { proxy.scrollTo(current.id, anchor: .center) }
+                }
+            }
+        }
+        .background(Color(red: 0x1E / 255, green: 0x1E / 255, blue: 0x1E / 255))
+    }
+
+    // MARK: cacalang source (only when this session was opened from cacalang, not raw CIL)
+
+    /// Split once per render, not cached across renders: sessions never
+    /// swap cacalangSource mid-debug (a new session is created for that),
+    /// and these are the same small sample-sized programs memoryView's own
+    /// "plain VStack, not Lazy" comment already reasons is cheap enough not
+    /// to bother optimizing.
+    private var sourceLines: [(number: Int, text: Substring)] {
+        guard let source = session.cacalangSource else { return [] }
+        return Array(source.split(separator: "\n", omittingEmptySubsequences: false).enumerated())
+            .map { (number: $0.offset + 1, text: $0.element) }
+    }
+
+    private var sourceView: some View {
+        ScrollViewReader { proxy in
+            ScrollView {
+                VStack(alignment: .leading, spacing: 0) {
+                    Text("CACALANG SOURCE").font(.caption).foregroundStyle(.secondary).padding(4)
+                    ForEach(sourceLines, id: \.number) { line in
+                        let isCurrent = line.number == session.currentSourceLine
+                        HStack(spacing: 8) {
+                            Text("\(line.number)")
+                                .foregroundStyle(isCurrent ? .white : Color(red: 0x85 / 255, green: 0x85 / 255, blue: 0x85 / 255))
+                                .frame(width: 28, alignment: .trailing)
+                            Text(String(line.text))
+                                .foregroundStyle(isCurrent ? .white : Color(red: 0xD4 / 255, green: 0xD4 / 255, blue: 0xD4 / 255))
+                            Spacer()
+                        }
+                        .padding(.horizontal, 4)
+                        .background(isCurrent ? Color(red: 0x26 / 255, green: 0x4F / 255, blue: 0x78 / 255) : .clear)
+                        .id(line.number)
+                    }
+                }
+                .font(.system(size: 11, design: .monospaced))
+                .padding(4)
+            }
+            .onChange(of: session.steps) {
+                if let current = session.currentSourceLine {
+                    withAnimation { proxy.scrollTo(current, anchor: .center) }
                 }
             }
         }

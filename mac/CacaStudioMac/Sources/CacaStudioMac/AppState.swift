@@ -32,6 +32,16 @@ enum SourceLanguage {
     case cil, cacalang
 }
 
+/// resolveToCIL()'s result: the CIL text every caller needs, plus — only
+/// when the editor held cacalang source — the original source text and its
+/// line map, so the debugger can show cacalang source alongside the CIL
+/// instruction currently executing (see DebugSession.currentSourceLine).
+struct ResolvedCIL {
+    var cil: String
+    var cacalangSource: String?
+    var lineMap: [(byteOffset: Int, sourceLine: Int)]
+}
+
 /// The single-document application state — a Swift port of Caca.VM.Studio's
 /// MainForm, minus the WinForms control plumbing. One editor, one output
 /// pane, one optional debug session, exactly like the WinForms IDE (it isn't
@@ -232,15 +242,16 @@ final class AppState: ObservableObject {
     }
 
     /// Cross-compiles `source` to CIL via cacalang's own CLI when the
-    /// editor holds cacalang source, or returns it unchanged when it's
+    /// editor holds cacalang source, or returns it unchanged (with no source
+    /// map — there's no higher-level source to map back to) when it's
     /// already CIL. Compile/Compile & Run/Debug all go through this rather
     /// than assuming `source` is always directly-assemblable. Appends
     /// compile diagnostics to output on failure and returns nil; callers
     /// should already have called clearOutput() before this.
-    private func resolveToCIL() -> String? {
+    private func resolveToCIL() -> ResolvedCIL? {
         switch language {
         case .cil:
-            return source
+            return ResolvedCIL(cil: source, cacalangSource: nil, lineMap: [])
         case .cacalang:
             appendOutput("── Compiling cacalang → CIL ──────────\n", .info)
             let tempURL = FileManager.default.temporaryDirectory
@@ -260,7 +271,8 @@ final class AppState: ObservableObject {
                 return nil
             }
             appendOutput("✓ Compiled to CIL.\n", .success)
-            return result.cilSource
+            guard let cil = result.cilSource else { return nil }
+            return ResolvedCIL(cil: cil, cacalangSource: source, lineMap: result.lineMap)
         }
     }
 
@@ -272,7 +284,8 @@ final class AppState: ObservableObject {
 
     func compile() {
         clearOutput()
-        guard let cil = resolveToCIL() else { return }
+        guard let resolved = resolveToCIL() else { return }
+        let cil = resolved.cil
         appendOutput("── Compiling… ──────────────────────\n", .info)
         do {
             let code = try Assembler.assemble(cil)
@@ -299,7 +312,8 @@ final class AppState: ObservableObject {
 
     func compileAndRun() {
         clearOutput()
-        guard let cil = resolveToCIL() else { return }
+        guard let resolved = resolveToCIL() else { return }
+        let cil = resolved.cil
         appendOutput("── Compile & Run ────────────────────\n", .info)
         let code: [UInt8]
         do {
@@ -335,12 +349,15 @@ final class AppState: ObservableObject {
 
     func openDebugger(openWindow: OpenWindowAction) {
         clearOutput()
-        guard let cil = resolveToCIL() else { return }
+        guard let resolved = resolveToCIL() else { return }
         appendOutput("── Debug ────────────────────────────\n", .info)
         do {
-            let code = try Assembler.assemble(cil)
+            let code = try Assembler.assemble(resolved.cil)
             appendOutput("✓ Compiled — \(code.count / 6) instruction(s).\n", .success)
-            debugSession = DebugSession(code: code)
+            debugSession = DebugSession(
+                code: code,
+                cacalangSource: resolved.cacalangSource,
+                lineMap: resolved.lineMap)
             openWindow(id: "debugger")
         } catch {
             appendOutput("✗ \(error)\n", .error)

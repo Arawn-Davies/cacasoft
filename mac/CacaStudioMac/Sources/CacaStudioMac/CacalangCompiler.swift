@@ -1,20 +1,28 @@
 import Foundation
 
 /// Optional cacalang integration — the Swift counterpart to Caca.VM.Studio's
-/// `#if CACALANG_SUPPORT` (MainForm.cs's OpenCacalang). There's no Swift port
-/// of cacalang's compiler, and porting one is real, separate feature work
-/// (see docs/architecture.md, "Caca Studio and cacalang" for why source-level
-/// debugging isn't attempted either way) — so instead of a compile-time
-/// project reference, this shells out to cacalang's own CLI, discovered at
-/// runtime via the same sibling-checkout convention used everywhere else in
-/// this session: an env var override, else a `../cacalang` checkout next to
-/// this repo with a built `caca` CLI. Absent either, `.caca` support is
-/// simply not offered — a runtime version of the same conditional the C#
-/// side expresses at compile time.
+/// `#if CACALANG_SUPPORT` (MainForm.cs's ResolveToCil). There's no Swift port
+/// of cacalang's compiler, so instead of a compile-time project reference,
+/// this shells out to cacalang's own CLI, discovered at runtime via the same
+/// sibling-checkout convention used everywhere else in this session: an env
+/// var override, else a `../cacalang` checkout next to this repo with a
+/// built `caca` CLI. Absent either, `.caca` support is simply not offered —
+/// a runtime version of the same conditional the C# side expresses at
+/// compile time. Source-level debugging (the CIL instruction currently
+/// executing shown alongside its cacalang source line) works from this
+/// runtime CLI boundary too, via the `<output>.linemap` sidecar `compile`
+/// reads below — see `Result.lineMap` and DebugSession.currentSourceLine.
 enum CacalangCompiler {
     struct Result {
         var cilSource: String?
         var diagnostics: String?
+        /// (byte offset, 1-based cacalang source line) pairs, ascending by
+        /// offset — read from the `<output>.linemap` sidecar `build --target
+        /// cacavm` writes alongside the .cil text (see cacalang's
+        /// Caca.Cli/Program.cs). Empty on a failed compile, or if the CLI is
+        /// too old to write the sidecar at all — a debugger with no map just
+        /// shows CIL alone, the same as debugging a .cil file directly.
+        var lineMap: [(byteOffset: Int, sourceLine: Int)] = []
     }
 
     /// Locates cacalang's own bundled samples directory (github.com/Arawn-
@@ -76,7 +84,11 @@ enum CacalangCompiler {
 
         let tempOutput = FileManager.default.temporaryDirectory
             .appendingPathComponent("cacastudio-\(UUID().uuidString).cil")
-        defer { try? FileManager.default.removeItem(at: tempOutput) }
+        let tempLineMap = URL(fileURLWithPath: tempOutput.path + ".linemap")
+        defer {
+            try? FileManager.default.removeItem(at: tempOutput)
+            try? FileManager.default.removeItem(at: tempLineMap)
+        }
 
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
@@ -93,12 +105,27 @@ enum CacalangCompiler {
         }
 
         if process.terminationStatus == 0, let cil = try? String(contentsOf: tempOutput, encoding: .utf8) {
-            return Result(cilSource: cil, diagnostics: nil)
+            return Result(cilSource: cil, diagnostics: nil, lineMap: readLineMap(tempLineMap))
         }
 
         let errData = stderrPipe.fileHandleForReading.readDataToEndOfFile()
         let errText = String(data: errData, encoding: .utf8).flatMap { $0.isEmpty ? nil : $0 }
             ?? "cacalang build failed (exit \(process.terminationStatus))."
         return Result(cilSource: nil, diagnostics: errText)
+    }
+
+    /// Parses the "<byteOffset> <sourceLine>" sidecar `build --target
+    /// cacavm` writes (see cacalang's Caca.Cli/Program.cs's BuildCacaVm) —
+    /// one pair per line, ascending byte offset. Missing file or any
+    /// malformed line just yields an empty map (an older cacalang CLI built
+    /// before this sidecar existed shouldn't break debugging, only degrade
+    /// it to CIL-only, same as debugging a .cil file directly).
+    private static func readLineMap(_ path: URL) -> [(byteOffset: Int, sourceLine: Int)] {
+        guard let text = try? String(contentsOf: path, encoding: .utf8) else { return [] }
+        return text.split(separator: "\n").compactMap { line in
+            let parts = line.split(separator: " ")
+            guard parts.count == 2, let offset = Int(parts[0]), let sourceLine = Int(parts[1]) else { return nil }
+            return (byteOffset: offset, sourceLine: sourceLine)
+        }
     }
 }

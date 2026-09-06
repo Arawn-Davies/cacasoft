@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
 using System.Runtime.InteropServices;
@@ -553,23 +554,24 @@ namespace Caca.VM.Studio
         /// <summary>
         /// Cross-compiles the editor's text to CIL via cacalang's own
         /// compiler when it holds cacalang source, or returns it unchanged
-        /// when it's already CIL. Compile/Compile &amp; Run/Debug all go
-        /// through this rather than assuming the editor is always directly-
-        /// assemblable — cacalang source is shown and edited as-is, never
-        /// silently replaced with its compiled CIL the moment it's loaded.
-        /// Stepping a cross-compiled program shows the generated CIL's
-        /// registers and instructions, not cacalang source lines or named
-        /// locals — see this feature's design note in docs/architecture.md
-        /// ("Caca Studio and cacalang") for why: source-level debugging
-        /// would need CilEmitter to emit a whole class of debug info (CIL
-        /// instruction -> source line, and a name for every stack slot) it
-        /// has never needed until now, which is real, separate feature
-        /// work, not something this reuses. Returns null and writes
-        /// diagnostics to the output pane on failure; callers should
-        /// already have called ClearOutput() before this.
+        /// (with an empty line map — there's no higher-level source to map
+        /// back to) when it's already CIL. Compile/Compile &amp; Run/Debug all
+        /// go through this rather than assuming the editor is always
+        /// directly-assemblable — cacalang source is shown and edited as-is,
+        /// never silently replaced with its compiled CIL the moment it's
+        /// loaded. <paramref name="lineMap"/> is CilEmitter's (byte offset,
+        /// 1-based source line) map, in ascending offset order — OpenDebugger
+        /// uses it to show the cacalang source line behind the CIL
+        /// instruction currently executing (see DebugForm's SourceLine
+        /// lookup); Compile/CompileAndRun don't need it and use GetCilSource()
+        /// instead, which discards it. Returns null and writes diagnostics to
+        /// the output pane on failure; callers should already have called
+        /// ClearOutput() before this.
         /// </summary>
-        private string? ResolveToCil()
+        private string? ResolveToCil(out IReadOnlyList<(int ByteOffset, int SourceLine)> lineMap)
         {
+            lineMap = Array.Empty<(int, int)>();
+
             if (_language != SourceLanguage.Cacalang)
             {
                 return _editor.Text;
@@ -590,7 +592,7 @@ namespace Caca.VM.Studio
             }
 
             var diagnostics = global::Caca.CilBackend.CilEmitter.Emit(
-                compilation.Program, compilation.Functions, out var cil);
+                compilation.Program, compilation.Functions, out var cil, out lineMap);
 
             if (diagnostics.Count > 0)
             {
@@ -685,8 +687,27 @@ namespace Caca.VM.Studio
         private string? GetCilSource()
         {
 #if CACALANG_SUPPORT
-            return ResolveToCil();
+            return ResolveToCil(out _);
 #else
+            return _editor.Text;
+#endif
+        }
+
+        /// <summary>
+        /// Same as <see cref="GetCilSource"/>, but also returns what
+        /// OpenDebugger's source pane needs: the original cacalang text
+        /// (null when the editor already held raw CIL — there's nothing
+        /// higher-level to show) and its line map (empty in that same case).
+        /// </summary>
+        private string? GetCilSourceWithMap(
+            out IReadOnlyList<(int ByteOffset, int SourceLine)> lineMap, out string? cacalangSource)
+        {
+#if CACALANG_SUPPORT
+            cacalangSource = _language == SourceLanguage.Cacalang ? _editor.Text : null;
+            return ResolveToCil(out lineMap);
+#else
+            lineMap = Array.Empty<(int, int)>();
+            cacalangSource = null;
             return _editor.Text;
 #endif
         }
@@ -813,7 +834,7 @@ namespace Caca.VM.Studio
         private void OpenDebugger()
         {
             ClearOutput();
-            string? cil = GetCilSource();
+            string? cil = GetCilSourceWithMap(out var lineMap, out var cacalangSource);
             if (cil == null) return;
             AppendOutput("── Debug ────────────────────────────\n", COutputInfo);
             try
@@ -821,7 +842,7 @@ namespace Caca.VM.Studio
                 var c = new Compiler.Compiler(cil);
                 byte[] code = c.Compile();
                 AppendOutput($"✓ Compiled — {code.Length / 6} instruction(s).\n", COutputSuccess);
-                var dbg = new DebugForm(code);
+                var dbg = new DebugForm(code, cacalangSource, lineMap);
                 dbg.Show(this);
             }
             catch (Compiler.BuildException ex)

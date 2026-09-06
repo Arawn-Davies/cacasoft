@@ -34,6 +34,18 @@ final class DebugSession: ObservableObject {
     private(set) var vm: VM
     private let console: DebugConsole
 
+    /// The original cacalang source, only when this session was opened from
+    /// cacalang (not raw CIL) — see AppState.resolveToCIL(). The debug
+    /// window shows a source pane alongside the instruction list exactly
+    /// when this is non-nil.
+    let cacalangSource: String?
+
+    /// (byte offset, 1-based source line) pairs, ascending by offset — see
+    /// CilEmitter.Emit's lineMap and CacalangCompiler.Result.lineMap. Empty
+    /// when cacalangSource is nil, or if it came from an older cacalang CLI
+    /// built before the sidecar existed.
+    private let lineMap: [(byteOffset: Int, sourceLine: Int)]
+
     @Published private(set) var halted = false
     @Published private(set) var steps = 0
     @Published private(set) var output: [OutputSegment] = []
@@ -49,8 +61,10 @@ final class DebugSession: ObservableObject {
     private var previous: [String: Int32] = [:]
     private var runTask: Task<Void, Never>?
 
-    init(code: [UInt8]) {
+    init(code: [UInt8], cacalangSource: String? = nil, lineMap: [(byteOffset: Int, sourceLine: Int)] = []) {
         self.code = code
+        self.cacalangSource = cacalangSource
+        self.lineMap = lineMap
         let console = DebugConsole()
         self.console = console
         vm = VM(program: code, ramSize: Globals.defaultRamSize, console: console)
@@ -64,6 +78,23 @@ final class DebugSession: ObservableObject {
 
     var isHalted: Bool {
         halted || !vm.running || Int(vm.ip) >= vm.ram.memory.count || vm.ram.memory[Int(vm.ip)] == 0x00
+    }
+
+    /// The cacalang source line behind the instruction at `vm.ip` right now
+    /// — the LAST lineMap entry whose byte offset is <= ip, since entries
+    /// are recorded at each statement's own starting offset and a running
+    /// PC sits somewhere at or after the start of whichever statement is
+    /// currently executing. nil when there's no map (a raw-CIL session) or
+    /// ip is before the first recorded statement (inside the compiler's own
+    /// generated prologue/string-data section, which has no source line).
+    var currentSourceLine: Int? {
+        let ip = Int(vm.ip)
+        var result: Int?
+        for entry in lineMap {
+            guard entry.byteOffset <= ip else { break }
+            result = entry.sourceLine
+        }
+        return result
     }
 
     // MARK: - Step logic, mirrors DoStep/OnHalted

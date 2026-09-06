@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -45,6 +46,22 @@ namespace Caca.VM.Studio
 
         // ── VM state ──────────────────────────────────────────────────────────
         private readonly byte[] _code;
+
+        /// <summary>
+        /// The original cacalang source this session was opened from, or null
+        /// when opened from raw CIL — there's no higher-level source to show
+        /// in that case. When non-null, BuildPanels() adds a source pane and
+        /// UpdateSourceView() keeps it highlighted/scrolled to CurrentSourceLine.
+        /// </summary>
+        private readonly string? _cacalangSource;
+
+        /// <summary>
+        /// (byte offset, 1-based source line) pairs, ascending by offset —
+        /// from CilEmitter.Emit's lineMap (via MainForm.GetCilSourceWithMap).
+        /// Empty when _cacalangSource is null.
+        /// </summary>
+        private readonly IReadOnlyList<(int ByteOffset, int SourceLine)> _lineMap;
+
         private VM _vm = null!;
         private bool _halted = false;
         private int  _steps  = 0;
@@ -56,6 +73,7 @@ namespace Caca.VM.Studio
         private RichTextBox _regBox   = null!;
         private RichTextBox _memBox   = null!;
         private RichTextBox _outBox   = null!;
+        private RichTextBox? _sourceBox;
         private ToolStripButton _stepBtn  = null!;
         private ToolStripButton _runBtn   = null!;
         private ToolStripButton _pauseBtn = null!;
@@ -67,12 +85,42 @@ namespace Caca.VM.Studio
 
         // ── Constructor ───────────────────────────────────────────────────────
 
-        public DebugForm(byte[] rawBytecode)
+        public DebugForm(
+            byte[] rawBytecode,
+            string? cacalangSource = null,
+            IReadOnlyList<(int ByteOffset, int SourceLine)>? lineMap = null)
         {
             _code = rawBytecode;
+            _cacalangSource = cacalangSource;
+            _lineMap = lineMap ?? Array.Empty<(int, int)>();
             BuildUI();
             InitVM();
             UpdateDisplay();
+        }
+
+        /// <summary>
+        /// The cacalang source line behind the instruction at IP right now —
+        /// the LAST _lineMap entry whose byte offset is &lt;= IP, since entries
+        /// are recorded at each statement's own starting offset and a running
+        /// IP sits somewhere at or after the start of whichever statement is
+        /// currently executing. Null when there's no map (a raw-CIL session)
+        /// or IP is before the first recorded statement (inside the
+        /// compiler's own generated prologue/string-data section, which has
+        /// no source line).
+        /// </summary>
+        private int? CurrentSourceLine
+        {
+            get
+            {
+                int ip = _vm.IP;
+                int? result = null;
+                foreach (var (byteOffset, sourceLine) in _lineMap)
+                {
+                    if (byteOffset > ip) break;
+                    result = sourceLine;
+                }
+                return result;
+            }
         }
 
         // ── VM lifecycle ──────────────────────────────────────────────────────
@@ -143,6 +191,7 @@ namespace Caca.VM.Studio
         {
             UpdateRegisters();
             UpdateMemory();
+            UpdateSourceView();
             UpdateStatus();
             if (_stepsLabelHost != null) _stepsLabelHost.Text = $"Steps: {_steps}";
         }
@@ -338,6 +387,69 @@ namespace Caca.VM.Studio
             _memBox.Invalidate();
         }
 
+        /// <summary>
+        /// Rebuilds the cacalang source pane, highlighting CurrentSourceLine
+        /// and scrolling to it — a no-op when _sourceBox wasn't built (this
+        /// session was opened from raw CIL, not cacalang). Mirrors
+        /// UpdateMemory()'s exact WM_SETREDRAW-suppress / scroll-then-restore
+        /// pattern, including the same ordering constraint noted there:
+        /// SelectionStart for the scroll must be the LAST thing set before
+        /// redraw is re-enabled, or something later silently overrides it —
+        /// see this file's own history (the memory-view scroll-reset bug)
+        /// for why that ordering is load-bearing, not stylistic.
+        /// </summary>
+        private void UpdateSourceView()
+        {
+            if (_sourceBox == null || _cacalangSource == null) return;
+
+            SendMessage(_sourceBox.Handle, WM_SETREDRAW, false, 0);
+            _sourceBox.Clear();
+
+            int? currentLine = CurrentSourceLine;
+            int lineCharStart = -1;
+            string[] lines = _cacalangSource.Replace("\r", "").Split('\n');
+
+            for (int i = 0; i < lines.Length; i++)
+            {
+                int lineNumber = i + 1;
+                bool isCurrent = lineNumber == currentLine;
+                if (isCurrent) lineCharStart = _sourceBox.TextLength;
+
+                int prefixStart = _sourceBox.TextLength;
+                string prefix = $"{lineNumber,4}  ";
+                _sourceBox.AppendText(prefix);
+                _sourceBox.Select(prefixStart, prefix.Length);
+                _sourceBox.SelectionColor = isCurrent ? CIpRowFg : CAddr;
+                if (isCurrent) _sourceBox.SelectionBackColor = CIpRow;
+
+                int textStart = _sourceBox.TextLength;
+                _sourceBox.AppendText(lines[i]);
+                _sourceBox.Select(textStart, lines[i].Length);
+                _sourceBox.SelectionColor = isCurrent ? CIpRowFg : CDefault;
+                if (isCurrent) _sourceBox.SelectionBackColor = CIpRow;
+
+                int nlStart = _sourceBox.TextLength;
+                _sourceBox.AppendText("\n");
+                if (isCurrent)
+                {
+                    _sourceBox.Select(nlStart, 1);
+                    _sourceBox.SelectionBackColor = CIpRow;
+                }
+
+                _sourceBox.Select(_sourceBox.TextLength, 0);
+                _sourceBox.SelectionBackColor = CBg;
+            }
+
+            if (lineCharStart >= 0)
+            {
+                _sourceBox.SelectionStart = lineCharStart;
+                _sourceBox.ScrollToCaret();
+            }
+
+            SendMessage(_sourceBox.Handle, WM_SETREDRAW, true, 0);
+            _sourceBox.Invalidate();
+        }
+
         private string DecodeInstruction(int offset)
         {
             byte b0 = _vm.ram.memory[offset];
@@ -415,8 +527,11 @@ namespace Caca.VM.Studio
         private void BuildUI()
         {
             Text            = "Caca Studio – Debugger";
-            Size            = new Size(1020, 680);
-            MinimumSize     = new Size(720, 520);
+            // The extra 360px is only needed when a cacalang source pane is
+            // actually going to be built (see BuildPanels()) — a raw-CIL
+            // session shouldn't default to a wider window than it needs.
+            Size            = _cacalangSource != null ? new Size(1380, 680) : new Size(1020, 680);
+            MinimumSize     = _cacalangSource != null ? new Size(1080, 520) : new Size(720, 520);
             StartPosition   = FormStartPosition.CenterParent;
             BackColor       = CSide;
             ForeColor       = CDefault;
@@ -592,7 +707,40 @@ namespace Caca.VM.Studio
             rightPanel.Controls.Add(PanelLabel("  MEMORY  (6 bytes / instruction)"));
             rightPanel.Controls.Add(outputContainer);
 
+            // Source panel: only when this session was opened from cacalang,
+            // not raw CIL — there's no higher-level source to show otherwise.
+            // Docking note: WinForms docks in REVERSE Controls.Add order (the
+            // last-added control's Dock edge is claimed first), which is why
+            // rightPanel (Dock=Fill) is added FIRST below — both edge-docked
+            // panels (left, and this one if present) need to be added after
+            // it so Fill only claims whatever's left between them.
+            Panel? sourcePanel = null;
+            if (_cacalangSource != null)
+            {
+                sourcePanel = new Panel
+                {
+                    Dock      = DockStyle.Right,
+                    Width     = 360,
+                    BackColor = CBg,
+                };
+                _sourceBox = new RichTextBox
+                {
+                    Dock        = DockStyle.Fill,
+                    BackColor   = CBg,
+                    ForeColor   = CDefault,
+                    Font        = PickMonoFont(9.5f),
+                    ReadOnly    = true,
+                    BorderStyle = BorderStyle.None,
+                    WordWrap    = false,
+                    ScrollBars  = RichTextBoxScrollBars.Both,
+                    DetectUrls  = false,
+                };
+                sourcePanel.Controls.Add(_sourceBox);
+                sourcePanel.Controls.Add(PanelLabel("  CACALANG SOURCE"));
+            }
+
             Controls.Add(rightPanel);
+            if (sourcePanel != null) Controls.Add(sourcePanel);
             Controls.Add(leftPanel);
         }
 
