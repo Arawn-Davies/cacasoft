@@ -249,6 +249,18 @@ sequenceDiagram
 | **Parameters** | `[dest: register]` |
 | **Description** | Reads the value at `SP` into `dest`, then increments `SP`. Popping with an empty stack (`SP` already at the top of RAM) is a fatal error and must raise a clean diagnostic. |
 
+#### PSHN — Push N Zeroed Bytes `0x22`
+| | |
+|-|-|
+| **Parameters** | `[count: register or value]` |
+| **Description** | Reserves `count` bytes on the stack in one instruction, equivalent to `count` individual `PSH 0x00`s: decrements `SP` by one and writes a zero byte, `count` times. Follows `JMP`'s addressing convention rather than `PSH`'s own — `RegReg`/`RegVal` reads `count` from a register (param1); `ValReg`/`ValVal` reads the full 32-bit literal (param2), not truncated to a byte, since a reservation count routinely exceeds 255. Same overwrite-protection failure mode as `PSH`, checked per byte. |
+
+#### POPN — Pop N Bytes `0x23`
+| | |
+|-|-|
+| **Parameters** | `[count: register or value]` |
+| **Description** | Discards `count` bytes from the stack in one instruction, equivalent to `count` individual `POP`s to a scratch register: increments `SP`, `count` times, without writing any register. Same addressing convention as `PSHN` (count from a register for `RegReg`/`RegVal`, from the full 32-bit literal for `ValReg`/`ValVal`). Same empty-stack failure mode as `POP`, checked per byte. |
+
 ---
 
 ### 6.6 I/O
@@ -345,6 +357,8 @@ sequenceDiagram
 | `TMT`    | `0x1D`  | Register/Memory     | Test more than                 |
 | `PSH`    | `0x20`  | Stack               | Push onto stack                |
 | `POP`    | `0x21`  | Stack               | Pop from stack                 |
+| `PSHN`   | `0x22`  | Stack               | Push N zeroed bytes            |
+| `POPN`   | `0x23`  | Stack               | Pop N bytes                    |
 | `INB`    | `0x24`  | I/O                 | Receive byte from port         |
 | `INW`    | `0x25`  | I/O                 | Receive word from port         |
 | `IND`    | `0x26`  | I/O                 | Receive double word from port  |

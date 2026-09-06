@@ -98,6 +98,17 @@ namespace Caca.VM.Decompiler
                 case 0x2B: // KEI
                     return $"{name} 0x{p1b:X2}";
 
+                // Single operand – register or a FULL 32-bit value (PSHN, POPN):
+                // deliberately not sharing the PSH/JMP/etc. bucket above, whose
+                // "0x{(byte)p2:X2}" truncates to a single byte — fine for PSH's
+                // own literal (a byte it pushes), wrong for a byte COUNT that
+                // routinely exceeds 255 (e.g. 256 for read_int's scratch buffer).
+                case 0x22: // PSHN
+                case 0x23: // POPN
+                    if (mode == AddressMode.RegisterRegister || mode == AddressMode.RegisterValue)
+                        return $"{name} {Registers.GetName(p1b)}";
+                    return $"{name} 0x{p2:X}";
+
                 // Two register operands
                 case 0x02: // SWP
                 case 0x1A: // TEQ

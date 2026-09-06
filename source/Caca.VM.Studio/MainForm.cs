@@ -1090,7 +1090,7 @@ main:
             "ADD","SUB","INC","DEC","MUL","DIV",
             "SHL","SHR","ROL","ROR","AND","BOR","XOR","NOT",
             "JMP","CLL","RET","JMT","JMF","CLT","CLF",
-            "PSH","POP",
+            "PSH","POP","PSHN","POPN",
             "INB","INW","IND","OUB","OUW","OUD",
             "SWI","KEI",
         };

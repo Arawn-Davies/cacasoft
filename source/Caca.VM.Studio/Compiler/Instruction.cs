@@ -29,7 +29,7 @@ namespace Caca.VM.Compiler
             { "JMP", 0x10 }, { "CLL", 0x11 }, { "RET", 0x12 },
             { "JMT", 0x13 }, { "JMF", 0x14 }, { "CLT", 0x17 }, { "CLF", 0x18 },
             // Stack
-            { "PSH", 0x20 }, { "POP", 0x21 },
+            { "PSH", 0x20 }, { "POP", 0x21 }, { "PSHN", 0x22 }, { "POPN", 0x23 },
             // I/O
             { "INB", 0x24 }, { "INW", 0x25 }, { "IND", 0x26 },
             { "OUB", 0x27 }, { "OUW", 0x28 }, { "OUD", 0x29 },

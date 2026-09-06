@@ -374,6 +374,8 @@ namespace Caca.VM.Studio
                 0x3B => $"{R(p1b)}, 0x{p2:X4}",                              // MOE
                 0x20 or 0x10 or 0x11 or 0x13 or 0x14 or 0x17 or 0x18 =>    // PSH JMP CLL JMT JMF CLT CLF
                     (mode == 0 || mode == 2) ? R(p1b) : $"0x{(byte)p2:X2}",
+                0x22 or 0x23 =>                                             // PSHN POPN — full 32-bit count, not truncated to a byte
+                    (mode == 0 || mode == 2) ? R(p1b) : $"0x{p2:X}",
                 _ =>
                     mode == 0 ? $"{R(p1b)}, {R(p2b0)}"                      // RegReg
                                : $"{R(p1b)}, 0x{p2:X2}",                    // RegVal / ValVal

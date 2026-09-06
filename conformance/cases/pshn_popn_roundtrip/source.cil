@@ -1,0 +1,19 @@
+; PSHN reserves N zeroed bytes in one instruction (the exact equivalent of
+; N individual PSH 0s); POPN deallocates N bytes in one instruction (the
+; exact equivalent of N individual POPs, discarded). Proven observably:
+; push a sentinel, reserve+read back a reserved byte (must be zero), then
+; deallocate and read the sentinel back (must be unchanged) — round-tripping
+; SP through PSHN/POPN must land exactly where plain PSH/POP would have.
+MOV X, 42
+PSH X
+PSHN 0x10
+MOV Y, SP
+MOE X, Y
+MOV AL, 0x06
+KEI 0x01
+POPN 0x10
+POP Y
+MOV X, Y
+MOV AL, 0x06
+KEI 0x01
+KEI 0x02

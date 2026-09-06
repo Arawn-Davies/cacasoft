@@ -46,6 +46,8 @@ extension VM {
         case 0x1D: opTmt()
         case 0x20: try opPsh(mode)
         case 0x21: try opPop()
+        case 0x22: try opPshn(mode)
+        case 0x23: try opPopn(mode)
         case 0x24, 0x25, 0x26, 0x27, 0x28, 0x29:
             // INB/INW/IND/OUB/OUW/OUD — reserved, no-ops in the reference VM
             // too (see wiki/Spec-Instructions.md §6.6's own notice). PC += 5
@@ -286,6 +288,43 @@ extension VM {
         let value = ram.getByte(Int(sp))
         sp += 1
         setRegister(ram.memory[Int(ip) + 1], Int32(value))
+        pc += 5
+    }
+
+    /// PSHN — reserve and zero N bytes in one instruction, replacing an
+    /// unrolled PSH-0 loop. Count convention mirrors JMP's, not PSH's own
+    /// (PSH truncates a literal count to one byte in param1; a reservation
+    /// count can exceed 255): RegReg/RegVal reads the count from a register
+    /// (param1), ValReg/ValVal reads the full 32-bit literal (param2).
+    private func opPshn(_ mode: AddressMode) throws {
+        let count = singleOperandIsRegister(mode)
+            ? getRegister(ram.memory[Int(ip) + 1])
+            : get32BitParameter(at: Int(ip) + 2)
+        // Matches C#'s `for (int i = 0; i < count; i++)` exactly, including
+        // silently doing nothing for a negative count — `0..<count` would
+        // trap on a negative Swift Range instead of skipping like C# does.
+        var i: Int32 = 0
+        while i < count {
+            sp -= 1
+            try ram.setByte(Int(sp), 0)
+            i += 1
+        }
+        pc += 5
+    }
+
+    /// POPN — deallocate N bytes in one instruction, discarding them,
+    /// replacing an unrolled POP-to-scratch-register loop. Same underflow
+    /// check as POP, applied once per byte to match its exact behavior.
+    private func opPopn(_ mode: AddressMode) throws {
+        let count = singleOperandIsRegister(mode)
+            ? getRegister(ram.memory[Int(ip) + 1])
+            : get32BitParameter(at: Int(ip) + 2)
+        var i: Int32 = 0
+        while i < count {
+            guard Int(sp) < ram.memory.count - 1 else { throw CacaVMError.stackUnderflow }
+            sp += 1
+            i += 1
+        }
         pc += 5
     }
 

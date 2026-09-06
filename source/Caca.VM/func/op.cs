@@ -333,6 +333,51 @@ namespace Caca.VM
                 PC += 5;
             }
 
+            // PSHN — Reserve N zeroed bytes on the stack (0x22)
+            // The exact equivalent of executing PSH 0 count times: this ISA can only
+            // move SP one byte at a time (there is no wide/bulk stack primitive, and
+            // writing SP directly is silently ignored — see VMextended.cs), so this
+            // still does count individual decrement+SetByte(0) steps internally. What
+            // it removes is count individual FETCHED INSTRUCTIONS: cacalang's CilEmitter
+            // used to zero-initialize every local by emitting one PSH 0 per byte
+            // (hundreds for a function using read_int's 256-byte scratch buffer), which
+            // was genuinely slow to single-step through and inflated code size for no
+            // reason — one PSHN replaces the whole unrolled run. Operand addressing
+            // mirrors JMP's: RegReg/RegVal reads the count from a register (param1),
+            // ValReg/ValVal reads it as a full 32-bit literal (param2), so counts aren't
+            // limited to 255 the way PSH's own single-byte value operand is.
+            else if (opcode == 0x22)
+            {
+                int count = (opMode == AddressMode.RegReg || opMode == AddressMode.RegVal)
+                    ? GetRegister(ram.memory[IP + 1])
+                    : Get32BitParameter(IP + 2);
+                for (int i = 0; i < count; i++)
+                {
+                    SP--;
+                    ram.SetByte(SP, 0);
+                }
+                PC += 5;
+            }
+
+            // POPN — Deallocate N bytes from the stack, discarding them (0x23)
+            // The exact equivalent of executing POP into a scratch register count
+            // times (cacalang's CilEmitter's old unrolled epilogue) — same per-byte
+            // underflow check as POP, just without needing a destination register
+            // at all, since the values are never used.
+            else if (opcode == 0x23)
+            {
+                int count = (opMode == AddressMode.RegReg || opMode == AddressMode.RegVal)
+                    ? GetRegister(ram.memory[IP + 1])
+                    : Get32BitParameter(IP + 2);
+                for (int i = 0; i < count; i++)
+                {
+                    if (SP >= ram.memory.Length - 1)
+                        throw new Exception("POPN was executed with an empty stack.");
+                    SP++;
+                }
+                PC += 5;
+            }
+
             // ── I/O ───────────────────────────────────────────────────────────────
 
             // INB — Receive byte from port (0x24)

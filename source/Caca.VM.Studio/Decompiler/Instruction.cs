@@ -24,7 +24,7 @@ namespace Caca.VM.Decompiler
             0x10 => "JMP", 0x11 => "CLL", 0x12 => "RET",
             0x13 => "JMT", 0x14 => "JMF", 0x17 => "CLT", 0x18 => "CLF",
             // Stack
-            0x20 => "PSH", 0x21 => "POP",
+            0x20 => "PSH", 0x21 => "POP", 0x22 => "PSHN", 0x23 => "POPN",
             // I/O
             0x24 => "INB", 0x25 => "INW", 0x26 => "IND",
             0x27 => "OUB", 0x28 => "OUW", 0x29 => "OUD",

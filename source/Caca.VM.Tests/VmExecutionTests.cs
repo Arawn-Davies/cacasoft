@@ -217,6 +217,80 @@ KEI 0x02
             Assert.Equal(0x42, vm.AL);
         }
 
+        /// <summary>
+        /// PSHN <c>0x10</c> must move SP by exactly 16 (matching 16 individual
+        /// PSH 0s) and zero every one of those bytes.
+        /// </summary>
+        [Fact]
+        public void Pshn_ReservesAndZeroesExactlyNBytes()
+        {
+            const string source = @"
+MOV Y, SP
+PSHN 0x10
+MOV X, SP
+MOE AH, X
+SUB Y, X
+KEI 0x02
+";
+            VM vm = CompileAndRun(source);
+            Assert.Equal(16, vm.Y); // SP moved by exactly 16
+            Assert.Equal(0, vm.AH); // the reserved byte at the new SP is zero
+        }
+
+        /// <summary>
+        /// PSHN then POPN of the same count must restore SP exactly, and a
+        /// value pushed before PSHN must survive the round trip unchanged —
+        /// proving POPN discards precisely what PSHN reserved, no more, no
+        /// less.
+        /// </summary>
+        [Fact]
+        public void Pshn_ThenPopn_RestoresStackPointerAndSurvivingValue()
+        {
+            const string source = @"
+MOV AL, 0x42
+PSH AL
+MOV Y, SP
+PSHN 0x10
+POPN 0x10
+MOV X, SP
+SUB X, Y
+MOV AL, 0x00
+POP AL
+KEI 0x02
+";
+            VM vm = CompileAndRun(source);
+            Assert.Equal(0, vm.X);    // SP back to exactly where it was before PSHN
+            Assert.Equal(0x42, vm.AL); // the value pushed before PSHN survived intact
+        }
+
+        /// <summary>PSHN into protected (own-code) memory throws, exactly like a run of individual PSHes would.</summary>
+        [Fact]
+        public void Pshn_IntoOwnCode_Throws()
+        {
+            const string source = @"
+MOV AL, 0x42
+PSHN 0x32
+KEI 0x02
+";
+            var c = new Compiler.Compiler(source);
+            byte[] code = c.Compile();
+            var vm = new VM(code, 20);
+            Globals.console = _console;
+            Globals.DebugMode = false;
+            Assert.Throws<Exception>(() => vm.Execute());
+        }
+
+        /// <summary>POPN on an empty stack throws, exactly like a bare POP would.</summary>
+        [Fact]
+        public void Popn_OnEmptyStack_Throws()
+        {
+            const string source = @"
+POPN 0x05
+KEI 0x02
+";
+            Assert.Throws<Exception>(() => CompileAndRun(source));
+        }
+
         // ── Bitwise ──────────────────────────────────────────────────────────────
 
         /// <summary>AND: 0xFF &amp; 0x0F = 0x0F.</summary>

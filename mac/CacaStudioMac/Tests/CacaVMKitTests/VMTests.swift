@@ -158,6 +158,63 @@ final class VMTests: XCTestCase {
         XCTAssertEqual(console.output, "302010Halting!\n")
     }
 
+    /// PSHN 0x10 must move SP by exactly 16 (matching 16 individual PSH 0s)
+    /// and zero every one of those bytes.
+    func testPshnReservesAndZeroesExactlyNBytes() throws {
+        let source = """
+        MOV Y, SP
+        PSHN 0x10
+        MOV X, SP
+        MOE AH, X
+        SUB Y, X
+        KEI 0x02
+        """
+        let (vm, _) = try runCIL(source)
+        XCTAssertEqual(vm.y, 16) // SP moved by exactly 16
+        XCTAssertEqual(vm.ah, 0) // the reserved byte at the new SP is zero
+    }
+
+    /// PSHN then POPN of the same count must restore SP exactly, and a value
+    /// pushed before PSHN must survive the round trip unchanged — proving
+    /// POPN discards precisely what PSHN reserved, no more, no less.
+    func testPshnThenPopnRestoresStackPointerAndSurvivingValue() throws {
+        let source = """
+        MOV AL, 0x42
+        PSH AL
+        MOV Y, SP
+        PSHN 0x10
+        POPN 0x10
+        MOV X, SP
+        SUB X, Y
+        MOV AL, 0x00
+        POP AL
+        KEI 0x02
+        """
+        let (vm, _) = try runCIL(source)
+        XCTAssertEqual(vm.x, 0)     // SP back to exactly where it was before PSHN
+        XCTAssertEqual(vm.al, 0x42) // the value pushed before PSHN survived intact
+    }
+
+    /// PSHN into protected (own-code) memory throws, exactly like a run of
+    /// individual PSHes would.
+    func testPshnIntoOwnCodeThrows() throws {
+        let source = """
+        MOV AL, 0x42
+        PSHN 0x32
+        KEI 0x02
+        """
+        XCTAssertThrowsError(try runCIL(source, ramSize: 20)) { error in
+            XCTAssertTrue("\(error)".contains("overwrite its own code"))
+        }
+    }
+
+    /// POPN on an empty stack throws, exactly like a bare POP would.
+    func testPopnOnEmptyStackThrows() throws {
+        XCTAssertThrowsError(try runCIL("POPN 0x05\nKEI 0x02\n")) { error in
+            XCTAssertTrue("\(error)".contains("empty stack"))
+        }
+    }
+
     func testStackOverflowIntoCodeThrows() throws {
         var source = "MOV AL, 0x42\n"
         for _ in 0..<100 { source += "PSH AL\n" }

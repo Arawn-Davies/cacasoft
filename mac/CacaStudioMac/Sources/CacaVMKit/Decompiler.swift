@@ -36,6 +36,8 @@ public enum DecompilerInstruction {
         case 0x18: return "CLF"
         case 0x20: return "PSH"
         case 0x21: return "POP"
+        case 0x22: return "PSHN"
+        case 0x23: return "POPN"
         case 0x24: return "INB"
         case 0x25: return "INW"
         case 0x26: return "IND"
@@ -137,6 +139,14 @@ public enum Decompiler {
                 return "\(name) \(reg(p1b))"
             }
             return "\(name) 0x\(String(format: "%02X", UInt8(truncatingIfNeeded: p2)))"
+
+        case 0x22, 0x23: // PSHN POPN — deliberately not the PSH/JMP bucket
+            // above: a reservation count can exceed 255, so the literal-count
+            // case must print the full 32-bit p2, not p2 truncated to a byte.
+            if mode == .regReg || mode == .regVal {
+                return "\(name) \(reg(p1b))"
+            }
+            return "\(name) 0x\(String(format: "%X", UInt32(bitPattern: p2)))"
 
         case 0x2A, 0x2B: // SWI KEI
             return "\(name) 0x\(String(format: "%02X", p1b))"
