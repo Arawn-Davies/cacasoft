@@ -23,6 +23,20 @@ The Caca Intermediate Language (CIL) is a low-level, register-based intermediate
 - **Portability** — suitable for implementation in managed runtimes (.NET/CLR), native code (C/C++), and constrained hardware (e.g. Z80/CP/M)
 - **Determinism** — no undefined behaviour; all edge cases are specified
 
+## Languages that target CIL
+
+[cacalang](https://github.com/Arawn-Davies/cacalang) is the first: `caca
+build --target cacavm` compiles a v1 subset of the language (control flow,
+recursion, integer/bool arithmetic — not yet `float`, `extern func`, or
+`string` beyond a literal `print`) to CIL assembly source, runnable with
+`Caca.VM.Cli` like any other `.cil` program. Its emitter had to solve a real
+problem this VM's register file creates: with only two registers (`X`, `Y`)
+wide enough for a 32-bit value and no register to spare as a frame pointer,
+locals and parameters are addressed relative to the current stack pointer
+using a compile-time-tracked depth, not a frame pointer in a register or in
+memory — the latter is a dead end on this VM specifically, since a fixed
+compile-time address is read-only once the program is running.
+
 ## Repository layout
 
 ```

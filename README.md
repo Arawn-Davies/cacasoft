@@ -6,6 +6,14 @@ CacaVM (CIL) provides a stable, portable compilation target with a small orthogo
 
 For the full language and VM specification, standard library reference, and instruction set, see the **[GitHub Wiki](../../wiki)**.
 
+[cacalang](https://github.com/Arawn-Davies/cacalang) compiles to CIL as a
+fourth backend (`caca build --target cacavm`), covering a v1 subset of the
+language — control flow, recursion, and integer/bool arithmetic, but not yet
+`float`, `extern func`, or `string` beyond a literal `print`. See its
+`src/Caca.CilBackend/CilEmitter.cs` for the emitter and `docs/architecture.md`
+for how it addresses locals and parameters without a frame-pointer register,
+which this VM's instruction set does not leave room for.
+
 ---
 
 ## Repository layout
