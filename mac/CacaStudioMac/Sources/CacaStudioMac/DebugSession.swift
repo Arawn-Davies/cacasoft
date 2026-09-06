@@ -38,7 +38,13 @@ final class DebugSession: ObservableObject {
     @Published private(set) var steps = 0
     @Published private(set) var output: [OutputSegment] = []
     @Published var speed: Double = 3 // 1...5, matching DebugForm's TrackBar
-    private(set) var isRunning = false
+    // @Published, not just private(set): the Run/Pause toolbar button reads
+    // this directly, and without it the label only happens to update
+    // because `steps` (a sibling @Published property) also changes on every
+    // tick and forces a re-render anyway — true today, but fragile, and
+    // would silently stop working the moment run()/pause() didn't happen to
+    // be followed by a steps mutation.
+    @Published private(set) var isRunning = false
 
     private var previous: [String: Int32] = [:]
     private var runTask: Task<Void, Never>?

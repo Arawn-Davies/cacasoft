@@ -114,7 +114,19 @@ private struct DebugSessionView: View {
     private var memoryView: some View {
         ScrollViewReader { proxy in
             ScrollView {
-                LazyVStack(alignment: .leading, spacing: 0) {
+                // NOT LazyVStack: ScrollViewReader.scrollTo can only scroll
+                // precisely to rows SwiftUI has actually measured. A
+                // LazyVStack defers measuring anything outside the current
+                // viewport, so scrolling to the current instruction while
+                // it's far from where the view is already sitting (e.g.
+                // right after pressing Run) lands wherever SwiftUI estimates
+                // instead of the real row — which is what "jumps to the PSH
+                // stuff" was: an overshoot to whatever nearby content
+                // happened to be, not the actual current instruction. CIL
+                // programs here are at most a few hundred rows, so a plain,
+                // fully-measured VStack costs nothing noticeable and makes
+                // scrollTo exact.
+                VStack(alignment: .leading, spacing: 0) {
                     Text("  ADDR   00  01  02  03  04  05   INSTRUCTION")
                         .foregroundStyle(.secondary)
                     ForEach(session.memoryRows) { row in
