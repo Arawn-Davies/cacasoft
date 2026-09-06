@@ -463,6 +463,18 @@ namespace Caca.VM.Studio
             var speedHost = new ToolStripControlHost(_speedBar) { AutoSize = false, Width = 110 };
             bar.Items.Add(speedHost);
 
+            // Apply live, not just at the moment Run is clicked — dragging
+            // the slider mid-run previously did nothing until Stop/Start
+            // again, since _runTimer.Interval was only ever read once, in
+            // StartRun().
+            _speedBar.ValueChanged += (_, _) =>
+            {
+                if (_runTimer.Enabled)
+                {
+                    _runTimer.Interval = Delays[Math.Clamp(_speedBar.Value, 1, 5)];
+                }
+            };
+
             bar.Items.Add(new ToolStripSeparator());
             var stepsLbl = new ToolStripLabel("Steps: 0")
             { ForeColor = Color.FromArgb(0xAA, 0xAA, 0xAA) };
@@ -626,14 +638,15 @@ namespace Caca.VM.Studio
 
         // ── Run / pause / stop ────────────────────────────────────────────────
 
+        private static readonly int[] Delays = { 0, 600, 150, 30, 8, 1 };
+
         private void StartRun()
         {
             if (IsHalted) return;
             _stepBtn.Enabled  = false;
             _runBtn.Enabled   = false;
             _pauseBtn.Enabled = true;
-            int[] delays = { 0, 600, 150, 30, 8, 1 };
-            _runTimer.Interval = delays[Math.Clamp(_speedBar.Value, 1, 5)];
+            _runTimer.Interval = Delays[Math.Clamp(_speedBar.Value, 1, 5)];
             _runTimer.Start();
             SetStatusState("● Running", CSuccess);
         }
