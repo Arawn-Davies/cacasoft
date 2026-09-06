@@ -74,6 +74,24 @@ struct CodeEditorView: NSViewRepresentable {
             parent.text = textView.string
         }
 
+        /// Auto-indent: preserve the current line's leading whitespace on
+        /// Enter — a port of MainForm.cs's OnEditorKeyDown.
+        func textView(_ textView: NSTextView, doCommandBy commandSelector: Selector) -> Bool {
+            guard commandSelector == #selector(NSResponder.insertNewline(_:)) else { return false }
+
+            let content = textView.string as NSString
+            let lineRange = content.lineRange(for: NSRange(location: textView.selectedRange().location, length: 0))
+            let currentLine = content.substring(with: lineRange)
+
+            var indent = ""
+            for character in currentLine {
+                if character == " " || character == "\t" { indent.append(character) } else { break }
+            }
+
+            textView.insertText("\n" + indent, replacementRange: textView.selectedRange())
+            return true
+        }
+
         func textStorage(_ textStorage: NSTextStorage, didProcessEditing editedMask: NSTextStorageEditActions, range editedRange: NSRange, changeInLength delta: Int) {
             guard !isHighlighting, editedMask.contains(.editedCharacters) else { return }
             isHighlighting = true

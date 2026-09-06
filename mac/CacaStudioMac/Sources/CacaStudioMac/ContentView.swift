@@ -9,6 +9,7 @@ import CacaVMKit
 struct ContentView: View {
     @EnvironmentObject var appState: AppState
     @Environment(\.openWindow) private var openWindow
+    @Environment(\.dismissWindow) private var dismissWindow
 
     var body: some View {
         VSplitView {
@@ -16,17 +17,29 @@ struct ContentView: View {
                 appState.statusLine = line
                 appState.statusColumn = column
             }
-            .onChange(of: appState.source) { _ in appState.modified = true }
+            .onChange(of: appState.source) { appState.modified = true }
             .frame(minHeight: 260)
 
             outputPane
                 .frame(minHeight: 140)
         }
+        .navigationTitle(appState.windowTitle)
+        .background(WindowAccessor { window in
+            guard appState.windowCloseDelegate == nil else { return }
+            let delegate = ConfirmCloseDelegate(appState: appState)
+            appState.windowCloseDelegate = delegate
+            window.delegate = delegate
+        })
         .toolbar {
             ToolbarItemGroup {
                 Button("New", systemImage: "doc") { appState.newDocument() }
                 Button("Open…", systemImage: "folder") { appState.open() }
                 Button("Save", systemImage: "square.and.arrow.down") { appState.save() }
+                Menu("Examples", systemImage: "text.book.closed") {
+                    ForEach(Example.allCases) { example in
+                        Button(example.rawValue) { appState.loadExample(example) }
+                    }
+                }
                 Divider()
                 Button("Compile", systemImage: "hammer") { appState.compile() }
                     .disabled(appState.isRunning)
@@ -49,11 +62,35 @@ struct ContentView: View {
 
     private var outputPane: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text("  Output")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .padding(.top, 4)
-            OutputConsoleView(segments: appState.output)
+            HStack {
+                Text("  Output").font(.caption).foregroundStyle(.secondary)
+                Spacer()
+                Button {
+                    if appState.consoleUndocked {
+                        dismissWindow(id: "console")
+                        appState.consoleUndocked = false
+                    } else {
+                        appState.consoleUndocked = true
+                        openWindow(id: "console")
+                    }
+                } label: {
+                    Image(systemName: appState.consoleUndocked ? "dock.rectangle" : "rectangle.on.rectangle")
+                }
+                .buttonStyle(.plain)
+                .help(appState.consoleUndocked ? "Dock back to main window" : "Pop out to separate window")
+                .padding(.trailing, 6)
+            }
+            .padding(.top, 4)
+
+            if appState.consoleUndocked {
+                Spacer()
+                Text("Console is popped out")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                OutputConsoleView(segments: appState.output)
+            }
         }
         .background(Color(nsColor: .init(red: 0x25 / 255, green: 0x25 / 255, blue: 0x26 / 255, alpha: 1)))
     }
@@ -90,6 +127,48 @@ private struct AboutView: View {
         }
         .padding(24)
         .frame(width: 360)
+    }
+}
+
+/// The undocked console window's content — a Swift counterpart to
+/// MainForm.cs's UndockConsole (a floating Form holding the same output
+/// panel). Closing this window (the red button, not our own toggle) redocks
+/// automatically, matching UndockConsole's FormClosing handler.
+struct ConsoleWindowView: View {
+    @EnvironmentObject var appState: AppState
+
+    var body: some View {
+        OutputConsoleView(segments: appState.output)
+            .frame(minWidth: 400, minHeight: 200)
+            .onDisappear { appState.consoleUndocked = false }
+    }
+}
+
+/// Grants access to the SwiftUI window's underlying NSWindow once it
+/// exists, by dropping an invisible NSView into the view hierarchy and
+/// reading its `.window` after layout.
+private struct WindowAccessor: NSViewRepresentable {
+    let callback: (NSWindow) -> Void
+
+    func makeNSView(context: Context) -> NSView {
+        let view = NSView()
+        DispatchQueue.main.async {
+            if let window = view.window { callback(window) }
+        }
+        return view
+    }
+
+    func updateNSView(_ nsView: NSView, context: Context) {}
+}
+
+/// Prompts to discard unsaved changes when the main window's close button
+/// is clicked — a Swift port of MainForm.cs's OnFormClosing.
+final class ConfirmCloseDelegate: NSObject, NSWindowDelegate {
+    weak var appState: AppState?
+    init(appState: AppState) { self.appState = appState }
+
+    func windowShouldClose(_ sender: NSWindow) -> Bool {
+        appState?.confirmDiscard() ?? true
     }
 }
 

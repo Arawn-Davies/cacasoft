@@ -205,6 +205,11 @@ namespace Caca.VM.Studio
             AddTool(CreateIcon("📄"), "New file (Ctrl+N)",         () => New());
             AddTool(CreateIcon("📁"), "Open source file (Ctrl+O)", () => Open());
             AddTool(CreateIcon("💾"), "Save file (Ctrl+S)",        () => Save());
+            AddDropDownTool(CreateIcon("📚"), "Load a built-in example", new (string, Action)[]
+            {
+                ("Hello World", () => LoadExample(ExampleHelloWorld)),
+                ("Calculator",  () => LoadExample(ExampleCalculator)),
+            });
             _toolbar.Items.Add(new ToolStripSeparator());
             AddTool(CreateIcon("⚙️"), "Compile to .ilc (F5)",      () => Compile());
             AddTool(CreateIcon("▶️"), "Compile and run (F6)",      () => CompileAndRun());
@@ -249,6 +254,33 @@ namespace Caca.VM.Studio
                 Height          = 24,
             };
             btn.Click += (_, _) => action();
+            _toolbar.Items.Add(btn);
+        }
+
+        private void AddDropDownTool(Bitmap icon, string tooltip, (string Text, Action Action)[] items)
+        {
+            var btn = new ToolStripDropDownButton
+            {
+                Image           = icon,
+                ToolTipText     = tooltip,
+                DisplayStyle    = ToolStripItemDisplayStyle.Image,
+                BackColor       = CToolbar,
+                AutoSize        = false,
+                Width           = 24,
+                Height          = 24,
+                ShowDropDownArrow = false,
+            };
+            foreach (var (text, action) in items)
+            {
+                var item = new ToolStripMenuItem(text)
+                {
+                    ForeColor = Color.FromArgb(0xCC, 0xCC, 0xCC),
+                    BackColor = Color.FromArgb(0x2D, 0x2D, 0x30),
+                };
+                item.Click += (_, _) => action();
+                btn.DropDownItems.Add(item);
+            }
+            btn.DropDown.BackColor = Color.FromArgb(0x2D, 0x2D, 0x30);
             _toolbar.Items.Add(btn);
         }
 

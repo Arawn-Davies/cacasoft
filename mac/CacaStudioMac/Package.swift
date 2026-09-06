@@ -3,7 +3,7 @@ import PackageDescription
 
 let package = Package(
     name: "CacaStudioMac",
-    platforms: [.macOS(.v13)],
+    platforms: [.macOS(.v14)], // needs dismissWindow (Window(id:)'s programmatic close), macOS 14+
     products: [
         .library(name: "CacaVMKit", targets: ["CacaVMKit"]),
         .executable(name: "CacaStudioMac", targets: ["CacaStudioMac"]),

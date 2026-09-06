@@ -48,5 +48,11 @@ struct CacaStudioMacApp: App {
                 .environmentObject(appState)
         }
         .commandsRemoved()
+
+        Window("Caca Studio – Console", id: "console") {
+            ConsoleWindowView()
+                .environmentObject(appState)
+        }
+        .commandsRemoved()
     }
 }

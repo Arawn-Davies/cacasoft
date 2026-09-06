@@ -40,6 +40,18 @@ final class AppState: ObservableObject {
     @Published var isRunning = false
     @Published var debugSession: DebugSession?
     @Published var showingAbout = false
+    @Published var consoleUndocked = false
+
+    /// Set when the editor's CIL was compiled from a .caca file (see
+    /// openCacalang), for the title bar and status line only — it plays no
+    /// part in Save, which always targets `filePath` (left nil by
+    /// openCacalang) so a compile can never silently overwrite the cacalang
+    /// source it came from. Mirrors MainForm.cs's `_sourceCacaPath`.
+    @Published var sourceCacaPath: URL?
+
+    /// Kept alive here so ARC doesn't drop it the moment WindowAccessor's
+    /// closure returns — see ConfirmCloseDelegate in ContentView.swift.
+    var windowCloseDelegate: NSObject?
 
     // MARK: - Output helpers
 
@@ -52,12 +64,18 @@ final class AppState: ObservableObject {
     // MARK: - Title / status, mirrors MainForm.SetTitle
 
     var windowTitle: String {
+        if let sourceCacaPath, filePath == nil {
+            return (modified ? "● " : "") + sourceCacaPath.lastPathComponent + " (compiled to CIL)"
+        }
         let name = filePath?.lastPathComponent ?? "Untitled"
         return (modified ? "● " : "") + name
     }
 
     var statusFileText: String {
-        filePath?.path ?? "New file"
+        if let sourceCacaPath, filePath == nil {
+            return "compiled from \(sourceCacaPath.path)"
+        }
+        return filePath?.path ?? "New file"
     }
 
     // MARK: - File operations, mirrors MainForm's New/Open/Save/SaveAs
@@ -77,6 +95,7 @@ final class AppState: ObservableObject {
         guard confirmDiscard() else { return }
         source = defaultSource
         filePath = nil
+        sourceCacaPath = nil
         modified = false
         lastBuild = []
         clearOutput()
@@ -86,18 +105,50 @@ final class AppState: ObservableObject {
         guard confirmDiscard() else { return }
         let panel = NSOpenPanel()
         panel.title = "Open Source"
-        panel.allowedContentTypes = cilContentTypes()
+        panel.allowedContentTypes = CacalangCompiler.findCli() != nil
+            ? cilContentTypes() + [UTType(filenameExtension: "caca")].compactMap { $0 }
+            : cilContentTypes()
         panel.allowsOtherFileTypes = true
         guard panel.runModal() == .OK, let url = panel.url else { return }
+
+        if url.pathExtension.lowercased() == "caca" {
+            openCacalang(url)
+            return
+        }
 
         do {
             source = try String(contentsOf: url, encoding: .utf8)
             filePath = url
+            sourceCacaPath = nil
             modified = false
             lastBuild = []
         } catch {
             appendOutput("✗ Could not open \(url.path): \(error.localizedDescription)\n", .error)
         }
+    }
+
+    /// Compiles a .caca file for the CacaVM target via cacalang's own CLI
+    /// (see CacalangCompiler) and loads the generated CIL into the editor —
+    /// everything downstream (Compile, Compile & Run, Debug) then runs
+    /// exactly as if that CIL had been typed directly. A Swift port of
+    /// MainForm.cs's OpenCacalang.
+    func openCacalang(_ path: URL) {
+        clearOutput()
+        appendOutput("── Compiling \(path.lastPathComponent) (cacalang → CIL) ──\n", .info)
+
+        let result = CacalangCompiler.compile(path)
+        if let diagnostics = result.diagnostics {
+            appendOutput(diagnostics, .error)
+            if !diagnostics.hasSuffix("\n") { appendOutput("\n") }
+            return
+        }
+
+        appendOutput("✓ Compiled to CIL.\n", .success)
+        source = result.cilSource ?? ""
+        filePath = nil
+        modified = false
+        lastBuild = []
+        sourceCacaPath = path
     }
 
     func save() {
@@ -127,6 +178,7 @@ final class AppState: ObservableObject {
     func loadExample(_ example: Example) {
         guard confirmDiscard() else { return }
         filePath = nil
+        sourceCacaPath = nil
         lastBuild = []
         clearOutput()
         source = example.source
@@ -222,6 +274,7 @@ final class AppState: ObservableObject {
             let asm = try Decompiler.decompile(bytes)
             source = asm
             filePath = nil
+            sourceCacaPath = nil
             modified = false
             clearOutput()
             appendOutput("✓ Decompiled \(bytes.count) byte(s) from \(url.lastPathComponent)\n", .success)

@@ -135,7 +135,7 @@ private struct DebugSessionView: View {
                 .font(.system(size: 11, design: .monospaced))
                 .padding(4)
             }
-            .onChange(of: session.steps) { _ in
+            .onChange(of: session.steps) {
                 if let current = session.memoryRows.first(where: { $0.isCurrent }) {
                     withAnimation { proxy.scrollTo(current.id, anchor: .center) }
                 }
