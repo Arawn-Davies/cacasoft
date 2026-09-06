@@ -58,7 +58,9 @@ private struct DebugSessionView: View {
             Button("Reset") { session.stopAndReset() }
 
             Text("Speed:").foregroundStyle(.secondary).font(.caption)
-            Slider(value: $session.speed, in: 1...5, step: 1).frame(width: 110)
+            Slider(value: $session.speed, in: 1...DebugSession.maxSpeed, step: 1).frame(width: 110)
+            Text(session.speed >= DebugSession.maxSpeed ? "Max" : "\(Int(session.speed))")
+                .font(.caption).foregroundStyle(.secondary).frame(width: 26, alignment: .leading)
 
             Spacer()
             Text("Steps: \(session.steps)").font(.caption).foregroundStyle(.secondary)

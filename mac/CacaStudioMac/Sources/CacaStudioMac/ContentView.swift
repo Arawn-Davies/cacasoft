@@ -1,6 +1,29 @@
 import SwiftUI
 import CacaVMKit
 
+/// A one-line stdin prompt shown under the output pane exactly while a
+/// running program is blocked on read()/readLine() — see LiveConsole in
+/// AppState.swift for the actual blocking mechanism.
+struct ConsoleInputField: View {
+    @State private var text = ""
+    let onSubmit: (String) -> Void
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "arrow.right").foregroundStyle(.secondary).font(.caption)
+            TextField("Program is waiting for input…", text: $text, onCommit: {
+                onSubmit(text)
+                text = ""
+            })
+            .textFieldStyle(.plain)
+            .font(.system(.body, design: .monospaced))
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 5)
+        .background(Color(red: 0x1E / 255, green: 0x1E / 255, blue: 0x1E / 255))
+    }
+}
+
 /// The main IDE window — a SwiftUI port of Caca.VM.Studio's MainForm:
 /// toolbar, line-numbered/syntax-highlighted editor, colour-coded output
 /// pane, and a status bar. File/Build menu commands live in
@@ -98,6 +121,9 @@ struct ContentView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 OutputConsoleView(segments: appState.output)
+                if appState.isWaitingForInput {
+                    ConsoleInputField { appState.submitConsoleInput($0) }
+                }
             }
         }
         .background(Color(nsColor: .init(red: 0x25 / 255, green: 0x25 / 255, blue: 0x26 / 255, alpha: 1)))

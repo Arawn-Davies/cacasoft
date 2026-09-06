@@ -24,6 +24,14 @@ struct OutputSegment: Identifiable {
     }
 }
 
+/// Which language the editor's `source` text currently is. Load Example,
+/// Open, and Decompile all set this; Compile/Compile & Run/Debug read it to
+/// decide whether `source` can be assembled directly or needs cross-
+/// compiling through cacalang first — see AppState.resolveToCIL().
+enum SourceLanguage {
+    case cil, cacalang
+}
+
 /// The single-document application state — a Swift port of Caca.VM.Studio's
 /// MainForm, minus the WinForms control plumbing. One editor, one output
 /// pane, one optional debug session, exactly like the WinForms IDE (it isn't
@@ -42,18 +50,30 @@ final class AppState: ObservableObject {
     @Published var showingAbout = false
     @Published var consoleUndocked = false
 
-    /// Set when the editor's CIL was compiled from a .caca file (see
-    /// openCacalang), for the title bar and status line only — it plays no
-    /// part in Save, which always targets `filePath` (left nil by
-    /// openCacalang) so a compile can never silently overwrite the cacalang
-    /// source it came from. Mirrors MainForm.cs's `_sourceCacaPath`.
-    @Published var sourceCacaPath: URL?
+    /// Set while Compile & Run's console is blocked waiting for stdin —
+    /// the output pane shows an input field exactly while this is true.
+    @Published var isWaitingForInput = false
+    private var pendingConsole: LiveConsole?
+
+    /// Called by the output pane's input field on submit.
+    func submitConsoleInput(_ text: String) {
+        pendingConsole?.provideLine(text)
+        isWaitingForInput = false
+    }
+
+    /// Which language `source` currently holds. Load Example (either
+    /// language), Open (by extension), and Decompile (always CIL) all set
+    /// this. Compile/Compile & Run/Debug read it via resolveToCIL() rather
+    /// than assuming `source` is always directly-assemblable CIL — cacalang
+    /// source is shown and edited as-is, never silently replaced with its
+    /// compiled CIL the moment it's loaded.
+    @Published var language: SourceLanguage = .cil
 
     /// Set by loadExample — there's no file on disk to name the document
     /// after, so without this the title bar falls through to "Untitled"
     /// for every example, indistinguishable from a genuinely blank
     /// document. Cleared by anything that gives the document a real
-    /// identity instead (New, Open, Decompile, openCacalang).
+    /// identity instead (New, Open, Decompile).
     @Published var loadedExampleName: String?
 
     /// Kept alive here so ARC doesn't drop it the moment WindowAccessor's
@@ -72,22 +92,17 @@ final class AppState: ObservableObject {
 
     var windowTitle: String {
         let mark = modified ? "● " : ""
-        if let sourceCacaPath, filePath == nil {
-            return mark + sourceCacaPath.lastPathComponent + " (compiled to CIL)"
-        }
         if let filePath {
             return mark + filePath.lastPathComponent
         }
         if let loadedExampleName {
-            return mark + loadedExampleName + " (example)"
+            let tag = language == .cacalang ? "cacalang example" : "example"
+            return mark + loadedExampleName + " (\(tag))"
         }
         return mark + "Untitled"
     }
 
     var statusFileText: String {
-        if let sourceCacaPath, filePath == nil {
-            return "compiled from \(sourceCacaPath.path)"
-        }
         if let filePath {
             return filePath.path
         }
@@ -114,7 +129,7 @@ final class AppState: ObservableObject {
         guard confirmDiscard() else { return }
         source = defaultSource
         filePath = nil
-        sourceCacaPath = nil
+        language = .cil
         loadedExampleName = nil
         modified = false
         lastBuild = []
@@ -131,46 +146,17 @@ final class AppState: ObservableObject {
         panel.allowsOtherFileTypes = true
         guard panel.runModal() == .OK, let url = panel.url else { return }
 
-        if url.pathExtension.lowercased() == "caca" {
-            openCacalang(url)
-            return
-        }
-
         do {
             source = try String(contentsOf: url, encoding: .utf8)
             filePath = url
-            sourceCacaPath = nil
+            language = url.pathExtension.lowercased() == "caca" ? .cacalang : .cil
             loadedExampleName = nil
             modified = false
             lastBuild = []
+            clearOutput()
         } catch {
             appendOutput("✗ Could not open \(url.path): \(error.localizedDescription)\n", .error)
         }
-    }
-
-    /// Compiles a .caca file for the CacaVM target via cacalang's own CLI
-    /// (see CacalangCompiler) and loads the generated CIL into the editor —
-    /// everything downstream (Compile, Compile & Run, Debug) then runs
-    /// exactly as if that CIL had been typed directly. A Swift port of
-    /// MainForm.cs's OpenCacalang.
-    func openCacalang(_ path: URL) {
-        clearOutput()
-        appendOutput("── Compiling \(path.lastPathComponent) (cacalang → CIL) ──\n", .info)
-
-        let result = CacalangCompiler.compile(path)
-        if let diagnostics = result.diagnostics {
-            appendOutput(diagnostics, .error)
-            if !diagnostics.hasSuffix("\n") { appendOutput("\n") }
-            return
-        }
-
-        appendOutput("✓ Compiled to CIL.\n", .success)
-        source = result.cilSource ?? ""
-        filePath = nil
-        loadedExampleName = nil
-        modified = false
-        lastBuild = []
-        sourceCacaPath = path
     }
 
     func save() {
@@ -180,9 +166,16 @@ final class AppState: ObservableObject {
 
     func saveAs() {
         let panel = NSSavePanel()
-        panel.title = "Save CIL Source"
-        panel.allowedContentTypes = cilContentTypes()
-        panel.nameFieldStringValue = filePath?.lastPathComponent ?? "program.cil"
+        switch language {
+        case .cil:
+            panel.title = "Save CIL Source"
+            panel.allowedContentTypes = cilContentTypes()
+            panel.nameFieldStringValue = filePath?.lastPathComponent ?? "program.cil"
+        case .cacalang:
+            panel.title = "Save cacalang Source"
+            panel.allowedContentTypes = [UTType(filenameExtension: "caca")].compactMap { $0 }
+            panel.nameFieldStringValue = filePath?.lastPathComponent ?? "program.caca"
+        }
         guard panel.runModal() == .OK, let url = panel.url else { return }
         writeSource(to: url)
     }
@@ -200,7 +193,7 @@ final class AppState: ObservableObject {
     func loadExample(_ example: Example) {
         guard confirmDiscard() else { return }
         filePath = nil
-        sourceCacaPath = nil
+        language = .cil
         lastBuild = []
         clearOutput()
         source = example.source
@@ -208,9 +201,10 @@ final class AppState: ObservableObject {
         loadedExampleName = example.rawValue
     }
 
-    /// Loads one of cacalang's own bundled samples through the exact same
-    /// openCacalang path a real file would take — see CacalangExample and
-    /// CacalangCompiler.findSamplesDir.
+    /// Loads one of cacalang's own bundled samples' RAW SOURCE — not
+    /// compiled to CIL. It's shown and edited as cacalang; Compile/
+    /// Compile & Run/Debug cross-compile it on demand via resolveToCIL().
+    /// See CacalangExample and CacalangCompiler.findSamplesDir.
     func loadCacalangExample(_ example: CacalangExample) {
         guard confirmDiscard() else { return }
 
@@ -221,13 +215,53 @@ final class AppState: ObservableObject {
         }
 
         let path = samplesDir.appendingPathComponent(example.fileName + ".caca")
-        guard FileManager.default.fileExists(atPath: path.path) else {
+        do {
+            source = try String(contentsOf: path, encoding: .utf8)
+        } catch {
             clearOutput()
             appendOutput("cacalang sample not found: \(path.path)\n", .error)
             return
         }
 
-        openCacalang(path)
+        filePath = nil
+        language = .cacalang
+        lastBuild = []
+        clearOutput()
+        modified = false
+        loadedExampleName = example.rawValue
+    }
+
+    /// Cross-compiles `source` to CIL via cacalang's own CLI when the
+    /// editor holds cacalang source, or returns it unchanged when it's
+    /// already CIL. Compile/Compile & Run/Debug all go through this rather
+    /// than assuming `source` is always directly-assemblable. Appends
+    /// compile diagnostics to output on failure and returns nil; callers
+    /// should already have called clearOutput() before this.
+    private func resolveToCIL() -> String? {
+        switch language {
+        case .cil:
+            return source
+        case .cacalang:
+            appendOutput("── Compiling cacalang → CIL ──────────\n", .info)
+            let tempURL = FileManager.default.temporaryDirectory
+                .appendingPathComponent("cacastudio-\(UUID().uuidString).caca")
+            do {
+                try source.write(to: tempURL, atomically: true, encoding: .utf8)
+            } catch {
+                appendOutput("✗ Could not write temporary cacalang source: \(error.localizedDescription)\n", .error)
+                return nil
+            }
+            defer { try? FileManager.default.removeItem(at: tempURL) }
+
+            let result = CacalangCompiler.compile(tempURL)
+            if let diagnostics = result.diagnostics {
+                appendOutput(diagnostics, .error)
+                if !diagnostics.hasSuffix("\n") { appendOutput("\n") }
+                return nil
+            }
+            appendOutput("✓ Compiled to CIL.\n", .success)
+            return result.cilSource
+        }
     }
 
     private func cilContentTypes() -> [UTType] {
@@ -238,9 +272,10 @@ final class AppState: ObservableObject {
 
     func compile() {
         clearOutput()
+        guard let cil = resolveToCIL() else { return }
         appendOutput("── Compiling… ──────────────────────\n", .info)
         do {
-            let code = try Assembler.assemble(source)
+            let code = try Assembler.assemble(cil)
             lastBuild = code
             appendOutput("✓ Compiled OK — \(code.count / 6) instruction(s), \(code.count) byte(s).\n", .success)
 
@@ -264,10 +299,11 @@ final class AppState: ObservableObject {
 
     func compileAndRun() {
         clearOutput()
+        guard let cil = resolveToCIL() else { return }
         appendOutput("── Compile & Run ────────────────────\n", .info)
         let code: [UInt8]
         do {
-            code = try Assembler.assemble(source)
+            code = try Assembler.assemble(cil)
             lastBuild = code
             appendOutput("✓ Compiled — \(code.count / 6) instruction(s).\n", .success)
             appendOutput("── VM output ────────────────────────\n", .info)
@@ -280,9 +316,13 @@ final class AppState: ObservableObject {
         let console = LiveConsole { [weak self] text in
             Task { @MainActor in self?.appendOutput(text) }
         }
+        console.onNeedInput = { [weak self, weak console] in
+            self?.pendingConsole = console
+            self?.isWaitingForInput = true
+        }
 
         Task.detached(priority: .userInitiated) { [weak self] in
-            defer { Task { @MainActor in self?.isRunning = false } }
+            defer { Task { @MainActor in self?.isRunning = false; self?.isWaitingForInput = false; self?.pendingConsole = nil } }
             do {
                 let vm = VM(program: code, ramSize: 1_048_576, console: console)
                 try vm.run()
@@ -295,9 +335,10 @@ final class AppState: ObservableObject {
 
     func openDebugger(openWindow: OpenWindowAction) {
         clearOutput()
+        guard let cil = resolveToCIL() else { return }
         appendOutput("── Debug ────────────────────────────\n", .info)
         do {
-            let code = try Assembler.assemble(source)
+            let code = try Assembler.assemble(cil)
             appendOutput("✓ Compiled — \(code.count / 6) instruction(s).\n", .success)
             debugSession = DebugSession(code: code)
             openWindow(id: "debugger")
@@ -319,7 +360,7 @@ final class AppState: ObservableObject {
             let asm = try Decompiler.decompile(bytes)
             source = asm
             filePath = nil
-            sourceCacaPath = nil
+            language = .cil
             loadedExampleName = nil
             modified = false
             clearOutput()
@@ -336,12 +377,43 @@ final class AppState: ObservableObject {
 
 /// Streams output to a callback as it's produced, rather than buffering it —
 /// so long-running programs show output incrementally instead of all at once
-/// when they halt.
+/// when they halt. Also supports interactive input: the VM always runs on a
+/// background thread (vm.run()/vm.tick() are synchronous, blocking calls), so
+/// read()/readLine() block that thread on a semaphore until the UI thread
+/// calls provideLine(_:) — the real fix for programs like FizzBuzz that ask
+/// a question via stdin before doing anything else: read()/readLine()
+/// previously just threw unconditionally, so any program that reads input
+/// failed immediately, before printing a single line, regardless of the
+/// program or the VM being otherwise completely correct.
 final class LiveConsole: CacaConsole, @unchecked Sendable {
     var onOutput: (String) -> Void
+    /// Called (already hopped to the main actor) when a read is blocking,
+    /// so the UI can show a prompt. Not called again until the current
+    /// request is satisfied by provideLine(_:).
+    var onNeedInput: (() -> Void)?
+
+    private let semaphore = DispatchSemaphore(value: 0)
+    private var pendingLine = ""
+
     init(onOutput: @escaping (String) -> Void) { self.onOutput = onOutput }
     func write(_ text: String) { onOutput(text) }
     func writeLine(_ text: String) { onOutput(text + "\n") }
-    func read() throws -> UInt8 { throw CacaVMError.unknownInterrupt(command: -1) }
-    func readLine() throws -> String { throw CacaVMError.unknownInterrupt(command: -1) }
+
+    /// Called from the UI thread once the user submits a line.
+    func provideLine(_ line: String) {
+        pendingLine = line
+        semaphore.signal()
+    }
+
+    func read() throws -> UInt8 {
+        Task { @MainActor in self.onNeedInput?() }
+        semaphore.wait()
+        return pendingLine.utf8.first ?? 0
+    }
+
+    func readLine() throws -> String {
+        Task { @MainActor in self.onNeedInput?() }
+        semaphore.wait()
+        return pendingLine
+    }
 }

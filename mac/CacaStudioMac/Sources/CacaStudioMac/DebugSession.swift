@@ -32,7 +32,7 @@ struct MemoryRow: Identifiable {
 final class DebugSession: ObservableObject {
     let code: [UInt8]
     private(set) var vm: VM
-    private let console: LiveConsole
+    private let console: DebugConsole
 
     @Published private(set) var halted = false
     @Published private(set) var steps = 0
@@ -51,7 +51,7 @@ final class DebugSession: ObservableObject {
 
     init(code: [UInt8]) {
         self.code = code
-        let console = LiveConsole { _ in } // set below, after self exists
+        let console = DebugConsole()
         self.console = console
         vm = VM(program: code, ramSize: Globals.defaultRamSize, console: console)
         vm.running = true
@@ -81,8 +81,18 @@ final class DebugSession: ObservableObject {
         if isHalted { onHalted() }
     }
 
+    /// Guards onHalted()'s one-time side effects (stopping the run loop,
+    /// appending the halt message) — deliberately NOT the same flag as
+    /// `halted` itself: both step() and tickSilently()'s catch blocks set
+    /// `halted = true` directly before calling onHalted(), so gating on
+    /// `halted` made the guard true from the very first call, silently
+    /// skipping isRunning = false (and everything else) every single time —
+    /// the Run/Pause button stayed stuck on "Pause" after any runtime error.
+    private var didAnnounceHalt = false
+
     private func onHalted() {
-        guard !halted else { return }
+        guard !didAnnounceHalt else { return }
+        didAnnounceHalt = true
         halted = true
         isRunning = false
         runTask?.cancel()
@@ -92,22 +102,97 @@ final class DebugSession: ObservableObject {
 
     // MARK: - Run / pause / stop, mirrors StartRun/PauseRun/StopAndReset
 
+    /// Speed 6 ("Max") runs flat-out: no per-tick delay, and — just as
+    /// important — no per-tick UI refresh either. A program like FizzBuzz
+    /// reserves ~270 bytes of locals, which cacalang's compiler currently
+    /// zero-initializes with one PSH 0 per byte (a real ISA constraint: SP
+    /// only ever moves via single-byte PSH/POP, see CilEmitter.cs and
+    /// VM.swift's setRegister — there is no faster way to reserve N bytes of
+    /// stack). Re-rendering the full registers/stack/memory panel on every
+    /// one of those ticks adds real, separate overhead on top of that: at
+    /// the old fixed 1ms-minimum delay, each visible "step" during Run
+    /// actually took ~40ms wall-clock in practice (measured directly: 3
+    /// real seconds of Run at the default speed produced only 75 steps, not
+    /// the ~100 the nominal delay implied) — almost all of it SwiftUI
+    /// re-rendering hundreds of Text rows, not VM execution. Ticking silently
+    /// in a batch and publishing @Published state only periodically fixes
+    /// both at once.
+    static let maxSpeed: Double = 6
+
+    private static let delays: [UInt64] = [0, 600_000_000, 150_000_000, 30_000_000, 8_000_000, 1_000_000, 0]
+
     func run() {
         guard !isHalted else { return }
         isRunning = true
-        let delays: [UInt64] = [0, 600_000_000, 150_000_000, 30_000_000, 8_000_000, 1_000_000]
-        let delay = delays[max(1, min(5, Int(speed)))]
         runTask?.cancel()
         runTask = Task { [weak self] in
+            var ticksSinceRefresh = 0
             while let self, self.isRunning, !self.isHalted {
-                self.step()
-                if delay > 0 {
-                    try? await Task.sleep(nanoseconds: delay)
+                // Read speed fresh every iteration — dragging the slider
+                // mid-run must take effect immediately, not just on the
+                // next press of Run. Capturing it once outside this loop
+                // (the original bug) meant the slider only ever mattered
+                // for whichever speed was selected at the moment Run was
+                // clicked.
+                let speedIndex = max(1, min(6, Int(self.speed)))
+                let isMaxSpeed = speedIndex == 6
+                if isMaxSpeed {
+                    self.tickSilently()
+                    ticksSinceRefresh += 1
+                    // Refresh the UI roughly 30 times/sec instead of every
+                    // tick — plenty to watch it run, far cheaper to draw.
+                    if ticksSinceRefresh >= 200 {
+                        self.publishAfterSilentTicks()
+                        ticksSinceRefresh = 0
+                        await Task.yield()
+                    }
                 } else {
-                    await Task.yield()
+                    if ticksSinceRefresh > 0 {
+                        self.publishAfterSilentTicks()
+                        ticksSinceRefresh = 0
+                    }
+                    self.step()
+                    let delay = Self.delays[speedIndex]
+                    if delay > 0 { try? await Task.sleep(nanoseconds: delay) }
                 }
             }
+            if ticksSinceRefresh > 0 {
+                self?.publishAfterSilentTicks()
+            }
         }
+    }
+
+    /// Executes one tick without touching any @Published property — used
+    /// only by the max-speed Run loop, which batches UI refreshes instead
+    /// of triggering one on every single tick. Mirrors step()'s logic
+    /// exactly, minus the parts that would otherwise force a SwiftUI
+    /// re-render 200 times more often than necessary.
+    private func tickSilently() {
+        guard !isHalted else { return }
+        do {
+            try vm.tick()
+        } catch {
+            pendingSilentError = "\n✗ Runtime exception: \(error)\n"
+            halted = true
+        }
+        stepsSinceLastPublish += 1
+    }
+
+    private var stepsSinceLastPublish = 0
+    private var pendingSilentError: String?
+
+    /// Flushes the batched step count and any pending error into the
+    /// @Published properties the UI actually observes — the one point in
+    /// the max-speed loop where a re-render is allowed to happen.
+    private func publishAfterSilentTicks() {
+        snapshot()
+        steps += stepsSinceLastPublish
+        stepsSinceLastPublish = 0
+        if let pendingSilentError {
+            output.append(OutputSegment(text: pendingSilentError, kind: .error))
+            self.pendingSilentError = nil
+        }
+        if isHalted { onHalted() }
     }
 
     func pause() {
@@ -121,6 +206,7 @@ final class DebugSession: ObservableObject {
         vm = VM(program: code, ramSize: Globals.defaultRamSize, console: console)
         vm.running = true
         halted = false
+        didAnnounceHalt = false
         steps = 0
         output.removeAll()
         snapshot()
@@ -228,4 +314,35 @@ final class DebugSession: ObservableObject {
 /// doesn't expose the C# Globals type, so the constant is restated here.
 enum Globals {
     static let defaultRamSize = 1_048_576
+}
+
+/// DebugSession's console — deliberately NOT LiveConsole. vm.tick() runs
+/// synchronously on the main actor here (that's what makes single-stepping
+/// simple), so blocking on a semaphore for input, as LiveConsole now does
+/// for Compile & Run's background-thread execution, would freeze the main
+/// thread waiting for input only the main thread could ever supply — a
+/// guaranteed deadlock the instant a stepped/run program hit a read.
+/// Throwing immediately (the original, safe behaviour) is a real, known
+/// gap — interactive input while single-stepping isn't supported — but a
+/// gap is recoverable; a frozen app is not.
+private final class DebugConsole: CacaConsole {
+    var onOutput: (String) -> Void = { _ in }
+    func write(_ text: String) { onOutput(text) }
+    func writeLine(_ text: String) { onOutput(text + "\n") }
+    func read() throws -> UInt8 { throw DebugConsoleError.inputNotSupported }
+    func readLine() throws -> String { throw DebugConsoleError.inputNotSupported }
+}
+
+/// A dedicated error rather than reusing CacaVMError.unknownInterrupt (the
+/// generic "no such interrupt" sentinel NullConsole also throws for reads):
+/// that description reads as a real VM-level fault ("Undocumented function:
+/// -1 / Halting for protection of data"), which is actively misleading here
+/// — this isn't a VM error at all, it's a known, deliberate IDE limitation
+/// with a clear cause and a clear workaround.
+private enum DebugConsoleError: Error, CustomStringConvertible {
+    case inputNotSupported
+
+    var description: String {
+        "this program is waiting for input, which the debugger doesn't support yet — use Compile & Run instead, which does."
+    }
 }
