@@ -23,5 +23,4 @@ Source code is kept in the `/source/` folder. The `/wiki/` folder in this reposi
 | `source/Caca.VM.Cli` | Command-line runtime — compiles and runs `.cil` source directly, or loads pre-compiled bytecode |
 | `source/Caca.VM.Studio` | WinForms IDE — assembler, decompiler, and step-through debugger (Windows only) |
 | `source/Caca.VM.Tests` | xUnit test suite covering the VM, assembler, and decompiler |
-| `source/Caca.VM.LanguageServer` | Language Server Protocol implementation for CIL (live errors) |
-| `editors/vscode` | VS Code extension: syntax highlighting + the language server client |
+| `source/Caca.VM.LanguageServer` | Language Server Protocol implementation for CIL (live errors) — client lives in [cacalang's VS Code extension](https://github.com/Arawn-Davies/cacalang/tree/main/editors/vscode) |

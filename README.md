@@ -24,8 +24,7 @@ which this VM's instruction set does not leave room for.
 | `/source/Caca.VM.Cli` | Command-line runtime host (net10.0) |
 | `/source/Caca.VM.Studio` | WinForms IDE with assembler, decompiler, and step debugger (net10.0-windows) |
 | `/source/Caca.VM.Tests` | xUnit test suite |
-| `/source/Caca.VM.LanguageServer` | Language Server Protocol implementation for CIL (live errors) |
-| `/editors/vscode` | VS Code extension: syntax highlighting + the language server client |
+| `/source/Caca.VM.LanguageServer` | Language Server Protocol implementation for CIL (live errors) — client lives in cacalang's VS Code extension |
 | `/wiki` | Mirror of the GitHub Wiki pages |
 | `/LICENSES` | License texts for this project and its FOSS dependencies |
 | `/examples` | Sample `.cil` assembly programs |
@@ -44,7 +43,18 @@ dotnet build "CacaVM.sln"
 dotnet test source/Caca.VM.Tests/Caca.VM.Tests.csproj
 ```
 
-> **Note:** Caca.VM.Studio targets `net10.0-windows` and will only build on Windows. The VM library, runtime, and tests build cross-platform.
+> **Note:** Caca.VM.Studio targets `net10.0-windows`, but builds (not runs —
+> WinForms itself is Windows-only) on any platform thanks to
+> `EnableWindowsTargeting`, which is what lets its cacalang integration (see
+> below) be verified by compiling it, even on a machine that can never
+> actually run the IDE.
+
+Optionally, if [cacalang](https://github.com/Arawn-Davies/cacalang) is
+checked out as a sibling directory, Caca.VM.Studio also gains the ability to
+open a `.caca` file directly (compiled to CIL, then handed to the existing
+assemble/run/debug pipeline unchanged) — conditional on
+`Exists('../../../cacalang/...')` in `Caca.VM.Studio.csproj`, so its CIL-only
+functionality never depends on a second repository being present.
 
 ---
 
@@ -85,9 +95,14 @@ Open any `.cil` file in Caca Studio to assemble, run, and step-debug it interact
 
 ## VS Code
 
-For editors other than Caca Studio, `/editors/vscode` provides syntax
-highlighting and live compile errors via a Language Server Protocol client.
-See [`editors/vscode/README.md`](editors/vscode/README.md) for setup.
+For editors other than Caca Studio, syntax highlighting and live compile
+errors are available via
+[cacalang's VS Code extension](https://github.com/Arawn-Davies/cacalang/tree/main/editors/vscode) —
+one extension covers both cacalang and CIL, each with its own language
+server (`Caca.LanguageServer` and this repository's own
+`source/Caca.VM.LanguageServer`), started independently. This repository
+does not carry its own separate CIL-only extension; see that README for
+setup, including how to point it at a server built from this repository.
 
 ---
 

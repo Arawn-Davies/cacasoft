@@ -56,6 +56,16 @@ namespace Caca.VM.Studio
         private byte[]  _lastBuild   = Array.Empty<byte>();
         private System.Windows.Forms.Timer _highlightTimer = null!;
         private Form?   _consoleDockForm;
+#if CACALANG_SUPPORT
+        /// <summary>
+        /// Set when the editor's CIL was compiled from a .caca file (see
+        /// OpenCacalang), for the title bar and status line only — it plays
+        /// no part in Save, which always targets _filePath (left empty by
+        /// OpenCacalang) so a compile can never silently overwrite the
+        /// cacalang source it came from.
+        /// </summary>
+        private string? _sourceCacaPath;
+#endif
 
         // ── Construction ─────────────────────────────────────────────────────
 
@@ -458,6 +468,9 @@ namespace Caca.VM.Studio
             _filePath = string.Empty;
             _modified = false;
             _lastBuild = Array.Empty<byte>();
+#if CACALANG_SUPPORT
+            _sourceCacaPath = null;
+#endif
             ClearOutput();
             SetTitle();
             LoadDefaultContent();
@@ -468,10 +481,24 @@ namespace Caca.VM.Studio
             if (!ConfirmDiscard()) return;
             using var dlg = new OpenFileDialog
             {
-                Title  = "Open CIL Source",
+                Title  = "Open Source",
+#if CACALANG_SUPPORT
+                Filter = "CIL or cacalang Source (*.cil;*.asm;*.caca)|*.cil;*.asm;*.caca|" +
+                         "CIL Source (*.cil;*.asm)|*.cil;*.asm|cacalang Source (*.caca)|*.caca|All files (*.*)|*.*",
+#else
                 Filter = "CIL Source (*.cil;*.asm)|*.cil;*.asm|All files (*.*)|*.*",
+#endif
             };
             if (dlg.ShowDialog() != DialogResult.OK) return;
+#if CACALANG_SUPPORT
+            if (string.Equals(Path.GetExtension(dlg.FileName), ".caca", StringComparison.OrdinalIgnoreCase))
+            {
+                OpenCacalang(dlg.FileName);
+                return;
+            }
+
+            _sourceCacaPath = null;
+#endif
             _editor.Text = File.ReadAllText(dlg.FileName);
             _filePath    = dlg.FileName;
             _modified    = false;
@@ -479,6 +506,72 @@ namespace Caca.VM.Studio
             SetTitle();
             ApplySyntaxHighlighting();
         }
+
+#if CACALANG_SUPPORT
+        /// <summary>
+        /// Compiles a .caca file for the CacaVM target (cacalang's
+        /// Emit/CilEmitter.cs) and loads the generated CIL into the editor —
+        /// everything downstream (Compile, Compile &amp; Run, Debug) then runs
+        /// exactly as if that CIL had been typed directly. Stepping shows the
+        /// generated CIL's registers and instructions, not cacalang source
+        /// lines or named locals — see this feature's design note in
+        /// docs/architecture.md ("Caca Studio and cacalang") for why: source-
+        /// level debugging would need CilEmitter to emit a whole class of
+        /// debug info (CIL instruction -> source line, and a name for every
+        /// stack slot) it has never needed until now, which is real, separate
+        /// feature work, not something this reuses.
+        ///
+        /// The .caca file itself is never at risk of being overwritten:
+        /// _filePath is left empty rather than set to the .caca path, so
+        /// Save falls through to Save As for a new .cil file instead of
+        /// silently replacing cacalang source with generated CIL.
+        /// </summary>
+        private void OpenCacalang(string path)
+        {
+            ClearOutput();
+            AppendOutput($"── Compiling {Path.GetFileName(path)} (cacalang → CIL) ──\n", COutputInfo);
+
+            var compilation = global::Caca.Compilation.CreateFromFile(path);
+
+            if (!compilation.Succeeded)
+            {
+                foreach (var diagnostic in compilation.FormatDiagnostics())
+                {
+                    AppendOutput(diagnostic + "\n", COutputError);
+                }
+
+                return;
+            }
+
+            var diagnostics = global::Caca.CilBackend.CilEmitter.Emit(
+                compilation.Program, compilation.Functions, out var cil);
+
+            if (diagnostics.Count > 0)
+            {
+                foreach (var diagnostic in diagnostics)
+                {
+                    AppendOutput(diagnostic.Format(compilation.FileName) + "\n", COutputError);
+                }
+
+                AppendOutput(
+                    "\nThe CacaVM backend covers a subset of cacalang: no float, no extern func, and string " +
+                    "only as print's literal operand. See cacalang's docs/architecture.md, \"The CacaVM " +
+                    "backend\".\n",
+                    COutputInfo);
+                return;
+            }
+
+            AppendOutput("✓ Compiled to CIL.\n", COutputSuccess);
+
+            _editor.Text    = cil;
+            _filePath       = string.Empty;
+            _modified       = false;
+            _lastBuild      = Array.Empty<byte>();
+            _sourceCacaPath = path;
+            SetTitle();
+            ApplySyntaxHighlighting();
+        }
+#endif
 
         private void Save()
         {
@@ -956,6 +1049,15 @@ main:
 
         private void SetTitle()
         {
+#if CACALANG_SUPPORT
+            if (!string.IsNullOrEmpty(_sourceCacaPath) && string.IsNullOrEmpty(_filePath))
+            {
+                string cacaName = Path.GetFileName(_sourceCacaPath);
+                Text = $"{(_modified ? "● " : "")}{cacaName} (compiled to CIL) — Caca Studio";
+                _statusFile.Text = $"  compiled from {_sourceCacaPath}";
+                return;
+            }
+#endif
             string name = string.IsNullOrEmpty(_filePath)
                 ? "Untitled"
                 : Path.GetFileName(_filePath);

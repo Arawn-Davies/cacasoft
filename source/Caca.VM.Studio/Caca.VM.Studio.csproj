@@ -20,4 +20,28 @@
     <ProjectReference Include="..\Caca.VM\Caca.VM.csproj" />
   </ItemGroup>
 
+  <!--
+    cacalang (github.com/Arawn-Davies/cacalang) is a separate repository this
+    one does not vendor. When a sibling checkout is present (the same
+    convention cacalang's own test suite already uses to find CacaVM), Caca
+    Studio can open a .caca file, compile it to CIL for the CacaVM target,
+    and hand the result to its own existing assemble/run/debug pipeline
+    unchanged (see MainForm.cs's OpenCacalang, guarded by CACALANG_SUPPORT).
+    Conditional, not required: Caca Studio's CIL-only functionality must not
+    depend on a second repository being checked out at all.
+  -->
+  <PropertyGroup>
+    <CacalangCompilerProject>..\..\..\cacalang\src\Caca.Compiler\Caca.Compiler.csproj</CacalangCompilerProject>
+    <CacalangCilBackendProject>..\..\..\cacalang\src\Caca.CilBackend\Caca.CilBackend.csproj</CacalangCilBackendProject>
+  </PropertyGroup>
+
+  <ItemGroup Condition="Exists('$(CacalangCompilerProject)') And Exists('$(CacalangCilBackendProject)')">
+    <ProjectReference Include="$(CacalangCompilerProject)" />
+    <ProjectReference Include="$(CacalangCilBackendProject)" />
+  </ItemGroup>
+
+  <PropertyGroup Condition="Exists('$(CacalangCompilerProject)') And Exists('$(CacalangCilBackendProject)')">
+    <DefineConstants>$(DefineConstants);CACALANG_SUPPORT</DefineConstants>
+  </PropertyGroup>
+
 </Project>

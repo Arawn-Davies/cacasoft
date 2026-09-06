@@ -52,8 +52,7 @@ compile-time address is read-only once the program is running.
 | `source/Caca.VM.Cli` | Command-line runtime — compiles and runs `.cil` source directly, or loads pre-compiled bytecode |
 | `source/Caca.VM.Studio` | WinForms IDE — assembler, decompiler, and step-through debugger (Windows only) |
 | `source/Caca.VM.Tests` | xUnit test suite covering the VM, assembler, and decompiler |
-| `source/Caca.VM.LanguageServer` | Language Server Protocol implementation for CIL (live errors) |
-| `editors/vscode` | VS Code extension: syntax highlighting + the language server client |
+| `source/Caca.VM.LanguageServer` | Language Server Protocol implementation for CIL (live errors) — client lives in cacalang's VS Code extension |
 
 ## Getting started
 
@@ -96,11 +95,13 @@ On Windows, Caca Studio (`source/Caca.VM.Studio`) additionally provides a full I
 
 ### Editing in VS Code
 
-For editors other than Caca Studio, `editors/vscode` provides syntax
-highlighting and live compile errors (no hover/definition/references —
-the assembler has no symbol table to query). See
-[`editors/vscode/README.md`](https://github.com/Arawn-Davies/CacaVM/blob/main/editors/vscode/README.md)
-for setup.
+For editors other than Caca Studio, syntax highlighting and live compile
+errors (no hover/definition/references — the assembler has no symbol table
+to query) are available via
+[cacalang's VS Code extension](https://github.com/Arawn-Davies/cacalang/tree/main/editors/vscode),
+which covers both cacalang and CIL in one install. See that extension's
+README for setup, including how to point it at a CIL language server built
+from this repository (`source/Caca.VM.LanguageServer`).
 
 
 
