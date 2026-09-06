@@ -1,0 +1,24 @@
+JMP main
+main:
+MOV X, 6
+PSH X
+CLL factorial
+MOV AL, 0x06
+KEI 0x01
+KEI 0x02
+factorial:
+POP Y
+MOV X, 2
+TLT Y, X
+JMF recurse
+MOV X, 1
+RET
+recurse:
+PSH Y
+MOV X, Y
+DEC X
+PSH X
+CLL factorial
+POP Y
+MUL X, Y
+RET

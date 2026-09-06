@@ -1,0 +1,109 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "build: solution (Debug)",
+            "command": "dotnet build \"${workspaceFolder}/CacaVM.sln\" --configuration Debug",
+            "type": "shell",
+            "group": { "kind": "build", "isDefault": true },
+            "presentation": { "reveal": "silent" },
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "build: solution (Release)",
+            "command": "dotnet build \"${workspaceFolder}/CacaVM.sln\" --configuration Release",
+            "type": "shell",
+            "group": "build",
+            "presentation": { "reveal": "always" },
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "build: Caca.VM.Cli (Debug)",
+            "command": "dotnet build ${workspaceFolder}/source/Caca.VM.Cli/Caca.VM.Cli.csproj --configuration Debug",
+            "type": "shell",
+            "group": "build",
+            "presentation": { "reveal": "silent" },
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "build: Caca.VM.Cli (Release)",
+            "command": "dotnet build ${workspaceFolder}/source/Caca.VM.Cli/Caca.VM.Cli.csproj --configuration Release",
+            "type": "shell",
+            "group": "build",
+            "presentation": { "reveal": "always" },
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "build: Caca.VM (Debug)",
+            "command": "dotnet build ${workspaceFolder}/source/Caca.VM/Caca.VM.csproj --configuration Debug",
+            "type": "shell",
+            "group": "build",
+            "presentation": { "reveal": "silent" },
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "build: Caca.VM (Release)",
+            "command": "dotnet build ${workspaceFolder}/source/Caca.VM/Caca.VM.csproj --configuration Release",
+            "type": "shell",
+            "group": "build",
+            "presentation": { "reveal": "always" },
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "build: Caca.VM.Studio (Debug)",
+            "command": "dotnet build ${workspaceFolder}/source/Caca.VM.Studio/Caca.VM.Studio.csproj --configuration Debug",
+            "type": "shell",
+            "group": "build",
+            "presentation": { "reveal": "silent" },
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "build: Caca.VM.Studio (Release)",
+            "command": "dotnet build ${workspaceFolder}/source/Caca.VM.Studio/Caca.VM.Studio.csproj --configuration Release",
+            "type": "shell",
+            "group": "build",
+            "presentation": { "reveal": "always" },
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "run: Caca.VM.Cli",
+            "command": "dotnet run --project ${workspaceFolder}/source/Caca.VM.Cli/Caca.VM.Cli.csproj",
+            "type": "shell",
+            "group": { "kind": "test", "isDefault": true },
+            "presentation": { "reveal": "always" },
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "run: Caca.VM.Studio",
+            "command": "dotnet run --project ${workspaceFolder}/source/Caca.VM.Studio/Caca.VM.Studio.csproj",
+            "type": "shell",
+            "group": "test",
+            "presentation": { "reveal": "always" },
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "clean: solution",
+            "command": "dotnet clean \"${workspaceFolder}/CacaVM.sln\"",
+            "type": "shell",
+            "group": "build",
+            "presentation": { "reveal": "always" },
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "cil: publish language server",
+            "command": "dotnet publish ${workspaceFolder}/source/Caca.VM.LanguageServer -c Release -o ${workspaceFolder}/artifacts/langserver",
+            "type": "shell",
+            "group": "build",
+            "presentation": { "reveal": "silent" },
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "cil: run current file",
+            "command": "dotnet run --project ${workspaceFolder}/source/Caca.VM.Cli -- ${file}",
+            "type": "shell",
+            "group": "test",
+            "presentation": { "reveal": "always", "panel": "dedicated" },
+            "problemMatcher": "$cil"
+        }
+    ]
+}

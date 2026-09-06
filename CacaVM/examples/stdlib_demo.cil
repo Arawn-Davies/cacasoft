@@ -1,0 +1,56 @@
+; stdlib_demo.cil
+; Demonstrates the newer standard library additions:
+;   KEI 0x01, AL=0x06 — write a signed 32-bit integer (X) as decimal
+;   SWI 0x01, AL=0x03 — strcmp: compare two null-terminated strings for equality
+;   SWI 0x01, AL=0x04 — atoi: parse a signed decimal integer from a string
+;
+; See wiki/Standard-Library.md for the full reference.
+
+        JMP     main
+
+; ── Data section ──────────────────────────────────────────────────────────────
+neg42:
+        DB      "-42", 0x00
+same_a:
+        DB      "match", 0x00
+same_b:
+        DB      "match", 0x00
+different:
+        DB      "nomatch", 0x00
+
+; ── Code section ──────────────────────────────────────────────────────────────
+main:
+        ; Print a signed integer directly — including one KEI 0x05 (unsigned,
+        ; 16-bit) could never produce: a value below zero.
+        MOV     X, -12345
+        MOV     AL, 0x06
+        KEI     0x01                    ; prints "-12345"
+
+        ; Parse "-42" back into a signed integer, then print the result — a
+        ; round trip no earlier version of the standard library could do at
+        ; all, for lack of any integer-parsing routine.
+        MOV     AL, 0x04
+        MOV     X,  neg42
+        SWI     0x01                    ; Y = -42
+        MOV     X,  Y
+        MOV     AL, 0x06
+        KEI     0x01                    ; prints "-42"
+
+        ; Compare two equal strings, then two different ones, printing 1/0.
+        MOV     AL, 0x03
+        MOV     X,  same_a
+        MOV     Y,  same_b
+        SWI     0x01                   ; B = 1
+        MOV     X,  B
+        MOV     AL, 0x06
+        KEI     0x01                   ; prints "1"
+
+        MOV     AL, 0x03
+        MOV     X,  same_a
+        MOV     Y,  different
+        SWI     0x01                   ; B = 0
+        MOV     X,  B
+        MOV     AL, 0x06
+        KEI     0x01                   ; prints "0"
+
+        KEI     0x02                   ; halt

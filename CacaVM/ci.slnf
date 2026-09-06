@@ -1,0 +1,11 @@
+{
+  "solution": {
+    "path": "CacaVM.sln",
+    "projects": [
+      "source\\Caca.VM\\Caca.VM.csproj",
+      "source\\Caca.VM.Cli\\Caca.VM.Cli.csproj",
+      "source\\Caca.VM.LanguageServer\\Caca.VM.LanguageServer.csproj",
+      "source\\Caca.VM.Tests\\Caca.VM.Tests.csproj"
+    ]
+  }
+}

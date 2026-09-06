@@ -1,0 +1,18 @@
+; hello_world_db.ail
+; Demonstrates the DB pseudo-instruction (like the x86 `db` directive).
+; The string "Hello, World" is defined inline in the source; the program
+; then prints it using KEI 0x01 in write-string mode.
+
+        JMP     main            ; skip over data section
+
+; ── Data section ──────────────────────────────────────────────────────────────
+hello:
+        DB      "Hello, World", 0x0A, 0x00   ; 14 bytes: text + newline + null
+
+; ── Code section ──────────────────────────────────────────────────────────────
+main:
+        MOV     AL, 0x02        ; KEI 0x01 mode: write string from memory
+        MOV     X, hello        ; X = address of string data
+        MOV     BL, 13          ; BL = length of "Hello, World\n" (13 bytes)
+        KEI     0x01            ; write string to stdout
+        KEI     0x02            ; halt

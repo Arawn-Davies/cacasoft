@@ -1,0 +1,123 @@
+; calculator.ail
+; Simple integer calculator demonstrating AIL arithmetic.
+; Each block prints   A op B = result
+; using KEI 0x01 (write-char / write-integer) interrupts.
+;
+; KEI 0x01 modes used:
+;   AL = 0x01  write a single character (value in AH)
+;   AL = 0x05  write register B as a decimal integer
+;
+; ─────────────────────────────────────────────────────────────────────────────
+; Helper macro pattern (repeated per operator):
+;   1.  Print the two operand characters and the operator symbol
+;   2.  Load operands into registers, perform the operation
+;   3.  Print the result via KEI 0x01 (AL=0x05)
+;   4.  Print a newline
+; ─────────────────────────────────────────────────────────────────────────────
+
+; ── 3 + 4 = 7 ────────────────────────────────────────────────────────────────
+        MOV     AL, 0x01
+        MOV     AH, '3'
+        KEI     0x01
+        MOV     AH, ' '
+        KEI     0x01
+        MOV     AH, '+'
+        KEI     0x01
+        MOV     AH, ' '
+        KEI     0x01
+        MOV     AH, '4'
+        KEI     0x01
+        MOV     AH, ' '
+        KEI     0x01
+        MOV     AH, '='
+        KEI     0x01
+        MOV     AH, ' '
+        KEI     0x01
+        MOV     BL, 3
+        ADD     BL, 4           ; BL = 7
+        MOV     AL, 0x05
+        KEI     0x01            ; print "7"
+        MOV     AL, 0x01
+        MOV     AH, 0x0A        ; newline
+        KEI     0x01
+
+; ── 10 - 3 = 7 ───────────────────────────────────────────────────────────────
+        MOV     AH, '1'
+        KEI     0x01
+        MOV     AH, '0'
+        KEI     0x01
+        MOV     AH, ' '
+        KEI     0x01
+        MOV     AH, '-'
+        KEI     0x01
+        MOV     AH, ' '
+        KEI     0x01
+        MOV     AH, '3'
+        KEI     0x01
+        MOV     AH, ' '
+        KEI     0x01
+        MOV     AH, '='
+        KEI     0x01
+        MOV     AH, ' '
+        KEI     0x01
+        MOV     BL, 10
+        SUB     BL, 3           ; BL = 7
+        MOV     AL, 0x05
+        KEI     0x01            ; print "7"
+        MOV     AL, 0x01
+        MOV     AH, 0x0A
+        KEI     0x01
+
+; ── 6 * 7 = 42 ───────────────────────────────────────────────────────────────
+        MOV     AH, '6'
+        KEI     0x01
+        MOV     AH, ' '
+        KEI     0x01
+        MOV     AH, '*'
+        KEI     0x01
+        MOV     AH, ' '
+        KEI     0x01
+        MOV     AH, '7'
+        KEI     0x01
+        MOV     AH, ' '
+        KEI     0x01
+        MOV     AH, '='
+        KEI     0x01
+        MOV     AH, ' '
+        KEI     0x01
+        MOV     BL, 6
+        MUL     BL, 7           ; BL = 42
+        MOV     AL, 0x05
+        KEI     0x01            ; print "42"
+        MOV     AL, 0x01
+        MOV     AH, 0x0A
+        KEI     0x01
+
+; ── 20 / 4 = 5 ───────────────────────────────────────────────────────────────
+        MOV     AH, '2'
+        KEI     0x01
+        MOV     AH, '0'
+        KEI     0x01
+        MOV     AH, ' '
+        KEI     0x01
+        MOV     AH, '/'
+        KEI     0x01
+        MOV     AH, ' '
+        KEI     0x01
+        MOV     AH, '4'
+        KEI     0x01
+        MOV     AH, ' '
+        KEI     0x01
+        MOV     AH, '='
+        KEI     0x01
+        MOV     AH, ' '
+        KEI     0x01
+        MOV     BL, 20
+        DIV     BL, 4           ; BL = 5
+        MOV     AL, 0x05
+        KEI     0x01            ; print "5"
+        MOV     AL, 0x01
+        MOV     AH, 0x0A
+        KEI     0x01
+
+        KEI     0x02            ; halt

@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Caca.VM\Caca.VM.csproj" />
+  </ItemGroup>
+
+  <!-- Link the compiler source files (pure logic, no WinForms dependency) directly from
+       Caca.VM.Studio, same pattern Caca.VM.Tests uses — lets this CLI compile .cil source
+       directly instead of only running pre-compiled bytecode. -->
+  <ItemGroup>
+    <Compile Include="..\Caca.VM.Studio\Compiler\AddressModes.cs" />
+    <Compile Include="..\Caca.VM.Studio\Compiler\BuildException.cs" />
+    <Compile Include="..\Caca.VM.Studio\Compiler\CharValue.cs" />
+    <Compile Include="..\Caca.VM.Studio\Compiler\Compiler.cs" />
+    <Compile Include="..\Caca.VM.Studio\Compiler\Instruction.cs" />
+    <Compile Include="..\Caca.VM.Studio\Compiler\Registers.cs" />
+  </ItemGroup>
+</Project>

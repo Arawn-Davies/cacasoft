@@ -1,0 +1,42 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Launch Caca.VM.Cli (Debug)",
+            "type": "dotnet",
+            "request": "launch",
+            "projectPath": "${workspaceFolder}/source/Caca.VM.Cli/Caca.VM.Cli.csproj",
+            "args": [],
+            "cwd": "${workspaceFolder}",
+            "console": "internalConsole",
+            "stopAtEntry": false
+        },
+        {
+            "name": "Launch Caca.VM.Cli (Release)",
+            "type": "dotnet",
+            "request": "launch",
+            "projectPath": "${workspaceFolder}/source/Caca.VM.Cli/Caca.VM.Cli.csproj",
+            "args": [],
+            "cwd": "${workspaceFolder}",
+            "console": "internalConsole",
+            "stopAtEntry": false,
+            "launchConfiguration": "Release"
+        },
+        {
+            "name": "Launch Caca.VM.Studio (Debug, Windows)",
+            "type": "dotnet",
+            "request": "launch",
+            "projectPath": "${workspaceFolder}/source/Caca.VM.Studio/Caca.VM.Studio.csproj",
+            "args": [],
+            "cwd": "${workspaceFolder}",
+            "console": "internalConsole",
+            "stopAtEntry": false
+        },
+        {
+            "name": "Attach to process",
+            "type": "dotnet",
+            "request": "attach",
+            "processId": "${command:pickProcess}"
+        }
+    ]
+}

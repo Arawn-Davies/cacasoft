@@ -1,0 +1,4 @@
+; POPN on an empty stack must trip the same underflow check plain POP does
+; (stack_underflow covers that case) — one instruction, same per-byte check.
+POPN 0x05
+KEI 0x02

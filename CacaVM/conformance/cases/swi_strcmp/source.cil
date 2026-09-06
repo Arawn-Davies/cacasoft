@@ -1,0 +1,23 @@
+JMP main
+strMatch1:
+DB "match", 0x00
+strMatch2:
+DB "match", 0x00
+strDiff:
+DB "nomatch", 0x00
+main:
+MOV AL, 0x03
+MOV X, strMatch1
+MOV Y, strMatch2
+SWI 0x01
+MOV X, B
+MOV AL, 0x06
+KEI 0x01
+MOV AL, 0x03
+MOV X, strMatch1
+MOV Y, strDiff
+SWI 0x01
+MOV X, B
+MOV AL, 0x06
+KEI 0x01
+KEI 0x02

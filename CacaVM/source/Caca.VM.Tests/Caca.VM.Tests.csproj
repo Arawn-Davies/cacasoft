@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <!-- Reference the VM library directly -->
+  <ItemGroup>
+    <ProjectReference Include="..\Caca.VM\Caca.VM.csproj" />
+  </ItemGroup>
+
+  <!-- Link Compiler source files without pulling in WinForms (Caca.VM.Studio is net10.0-windows) -->
+  <ItemGroup>
+    <Compile Include="..\Caca.VM.Studio\Compiler\AddressModes.cs" />
+    <Compile Include="..\Caca.VM.Studio\Compiler\BuildException.cs" />
+    <Compile Include="..\Caca.VM.Studio\Compiler\CharValue.cs" />
+    <Compile Include="..\Caca.VM.Studio\Compiler\Compiler.cs" />
+    <Compile Include="..\Caca.VM.Studio\Compiler\Instruction.cs" />
+    <Compile Include="..\Caca.VM.Studio\Compiler\Registers.cs" />
+    <Compile Include="..\Caca.VM.Studio\Decompiler\AddressModes.cs" />
+    <Compile Include="..\Caca.VM.Studio\Decompiler\Decompiler.cs" />
+    <Compile Include="..\Caca.VM.Studio\Decompiler\Instruction.cs" />
+    <Compile Include="..\Caca.VM.Studio\Decompiler\Registers.cs" />
+  </ItemGroup>
+
+</Project>
