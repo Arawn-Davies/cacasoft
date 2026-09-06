@@ -22,6 +22,7 @@ namespace Caca.VM.StandardLib
     ///   <item><term>0x03</term><description>Read one character from stdin into AH.</description></item>
     ///   <item><term>0x04</term><description>Read a line from stdin into RAM at address X; B is set to the number of bytes written.</description></item>
     ///   <item><term>0x05</term><description>Write the 16-bit value of register B as a decimal integer to stdout.</description></item>
+    ///   <item><term>0x06</term><description>Write the signed 32-bit value of register X as a decimal integer to stdout.</description></item>
     /// </list>
     ///
     /// <b>KEI 0x02 — halt:</b>
@@ -93,8 +94,18 @@ namespace Caca.VM.StandardLib
                 {
                     // Write-integer mode: print the 16-bit value in register B as a
                     // decimal (base-10) ASCII string.  Useful for printing numeric results
-                    // without manually converting digits.
+                    // without manually converting digits. Unsigned, and 16 bits wide --
+                    // see 0x06 for a full-range signed 32-bit equivalent.
                     Globals.console.Write(ParentVM.GetSplit('B').ToString());
+                }
+                else if (ParentVM.AL == 0x06)
+                {
+                    // Write-signed-integer mode: print the signed 32-bit value in
+                    // register X as a decimal (base-10) ASCII string, sign included.
+                    // int.ToString() already handles every edge case correctly,
+                    // including int.MinValue (negating it would overflow; ToString()
+                    // never negates, it formats the two's complement value directly).
+                    Globals.console.Write(ParentVM.X.ToString());
                 }
             }
             // ── KEI 0x02 — halt ──────────────────────────────────────────────

@@ -337,6 +337,176 @@ KEI 0x02
             Assert.Equal("Hi!Halting!\n", _console.Output);
         }
 
+        /// <summary>SWI 0x01 AL=0x03 (strcmp): two identical null-terminated strings compare equal (B=1).</summary>
+        [Fact]
+        public void SwiStrcmp_EqualStrings_SetsBToOne()
+        {
+            const string source = @"
+MOM 0x48, 0x80
+MOM 0x69, 0x81
+MOM 0x00, 0x82
+MOM 0x48, 0x90
+MOM 0x69, 0x91
+MOM 0x00, 0x92
+MOV AL, 0x03
+MOV X, 0x80
+MOV Y, 0x90
+SWI 0x01
+KEI 0x02
+";
+            VM vm = CompileAndRun(source);
+            Assert.Equal(1, vm.GetSplit('B'));
+        }
+
+        /// <summary>
+        /// SWI 0x01 AL=0x03 (strcmp): a difference partway through the strings, and a
+        /// difference in length alone (one string a strict prefix of the other, so the
+        /// shorter one hits its own terminator while the longer one still has a byte),
+        /// both compare unequal (B=0).
+        /// </summary>
+        [Fact]
+        public void SwiStrcmp_DifferentStrings_SetsBToZero()
+        {
+            const string source = @"
+MOM 0x48, 0x80
+MOM 0x69, 0x81
+MOM 0x00, 0x82
+MOM 0x48, 0x90
+MOM 0x6F, 0x91
+MOM 0x00, 0x92
+MOV AL, 0x03
+MOV X, 0x80
+MOV Y, 0x90
+SWI 0x01
+KEI 0x02
+";
+            VM vm = CompileAndRun(source);
+            Assert.Equal(0, vm.GetSplit('B'));
+        }
+
+        [Fact]
+        public void SwiStrcmp_PrefixOfLongerString_SetsBToZero()
+        {
+            // "Hi\0" at 0x80 vs "Hi!\0" at 0x90 — same first two bytes, but the first
+            // string terminates where the second still has a byte.
+            const string source = @"
+MOM 0x48, 0x80
+MOM 0x69, 0x81
+MOM 0x00, 0x82
+MOM 0x48, 0x90
+MOM 0x69, 0x91
+MOM 0x21, 0x92
+MOM 0x00, 0x93
+MOV AL, 0x03
+MOV X, 0x80
+MOV Y, 0x90
+SWI 0x01
+KEI 0x02
+";
+            VM vm = CompileAndRun(source);
+            Assert.Equal(0, vm.GetSplit('B'));
+        }
+
+        /// <summary>SWI 0x01 AL=0x04 (atoi): a plain positive decimal string parses into Y.</summary>
+        [Fact]
+        public void SwiAtoi_PositiveNumber_ParsesIntoY()
+        {
+            // "42\0" at 0x80.
+            const string source = @"
+MOM 0x34, 0x80
+MOM 0x32, 0x81
+MOM 0x00, 0x82
+MOV AL, 0x04
+MOV X, 0x80
+SWI 0x01
+KEI 0x02
+";
+            VM vm = CompileAndRun(source);
+            Assert.Equal(42, vm.Y);
+        }
+
+        /// <summary>SWI 0x01 AL=0x04 (atoi): a leading '-' negates the parsed value.</summary>
+        [Fact]
+        public void SwiAtoi_NegativeNumber_ParsesIntoY()
+        {
+            // "-17\0" at 0x80.
+            const string source = @"
+MOM 0x2D, 0x80
+MOM 0x31, 0x81
+MOM 0x37, 0x82
+MOM 0x00, 0x83
+MOV AL, 0x04
+MOV X, 0x80
+SWI 0x01
+KEI 0x02
+";
+            VM vm = CompileAndRun(source);
+            Assert.Equal(-17, vm.Y);
+        }
+
+        /// <summary>
+        /// SWI 0x01 AL=0x04 (atoi): parsing stops at the first non-digit rather than
+        /// failing, matching how C's own atoi treats trailing garbage.
+        /// </summary>
+        [Fact]
+        public void SwiAtoi_StopsAtFirstNonDigit()
+        {
+            // "12x\0" at 0x80.
+            const string source = @"
+MOM 0x31, 0x80
+MOM 0x32, 0x81
+MOM 0x78, 0x82
+MOM 0x00, 0x83
+MOV AL, 0x04
+MOV X, 0x80
+SWI 0x01
+KEI 0x02
+";
+            VM vm = CompileAndRun(source);
+            Assert.Equal(12, vm.Y);
+        }
+
+        /// <summary>
+        /// SWI 0x01 AL=0x04 (atoi): no digits at all — an empty string, or one that
+        /// starts with neither a sign nor a digit — is defined as Y=0, not an error.
+        /// </summary>
+        [Fact]
+        public void SwiAtoi_NoDigits_ResultIsZero()
+        {
+            // "x\0" at 0x80.
+            const string source = @"
+MOM 0x78, 0x80
+MOM 0x00, 0x81
+MOV AL, 0x04
+MOV X, 0x80
+SWI 0x01
+KEI 0x02
+";
+            VM vm = CompileAndRun(source);
+            Assert.Equal(0, vm.Y);
+        }
+
+        // ── KEI 0x01 AL=0x06 — write signed integer ──────────────────────────────
+
+        /// <summary>KEI 0x01 AL=0x06: prints the signed 32-bit value of X, negative included.</summary>
+        [Theory]
+        [InlineData(42, "42")]
+        [InlineData(-17, "-17")]
+        [InlineData(0, "0")]
+        [InlineData(int.MaxValue, "2147483647")]
+        [InlineData(int.MinValue, "-2147483648")]
+        public void KeiWriteSignedInt_PrintsSignedDecimal(int value, string expected)
+        {
+            string source = $@"
+MOV X, {value}
+MOV AL, 0x06
+KEI 0x01
+KEI 0x02
+";
+            CompileAndRun(source);
+            Assert.Equal(expected + "Halting!\n", _console.Output);
+        }
+
         // ── Compiler error handling ──────────────────────────────────────────────
 
         /// <summary>The compiler must reject an unknown mnemonic with a <see cref="BuildException"/>.</summary>

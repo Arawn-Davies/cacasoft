@@ -17,6 +17,8 @@ namespace Caca.VM.StandardLib
     ///   <listheader><term>AL</term><description>Action</description></listheader>
     ///   <item><term>0x01</term><description>Strlen: count bytes at address X until a zero byte; store length in B.</description></item>
     ///   <item><term>0x02</term><description>Strcpy: copy B bytes from address X to address Y.</description></item>
+    ///   <item><term>0x03</term><description>Strcmp: compare null-terminated strings at addresses X and Y for equality; store the result (1 equal, 0 not) in B.</description></item>
+    ///   <item><term>0x04</term><description>Atoi: parse a signed decimal integer from the null-terminated string at address X; store the result in Y.</description></item>
     /// </list>
     /// </summary>
     public static class SoftwareInterrupts
@@ -59,6 +61,99 @@ namespace Caca.VM.StandardLib
                     }
                     byte[] data = ParentVM.ram.GetSection(src, count);
                     ParentVM.ram.SetSection(dst, data);
+                }
+                else if (ParentVM.AL == 0x03)
+                {
+                    // Strcmp: compare null-terminated strings at addresses X and Y.
+                    // Equality only -- not lexicographic ordering. Ordering would need
+                    // a signed result, and B (the 16-bit BL/BH composite every other
+                    // string routine here uses) is combined unsigned (see
+                    // BitOps.CombineBytes): there is no sign bit to carry a "less than
+                    // zero" result through it correctly. B = 1 if equal, 0 if not,
+                    // matching strlen's convention of a plain count/flag in B.
+                    int limit = ParentVM.ram.memory.Length;
+                    int xAddr = ParentVM.X;
+                    int yAddr = ParentVM.Y;
+                    bool equal = true;
+                    int i = 0;
+                    while (true)
+                    {
+                        if (xAddr + i < 0 || xAddr + i >= limit || yAddr + i < 0 || yAddr + i >= limit)
+                        {
+                            Globals.console.WriteLine("SWI 0x01: strcmp address out of range\nHalting for protection of data");
+                            ParentVM.Halt();
+                            return;
+                        }
+
+                        byte xByte = ParentVM.ram.memory[xAddr + i];
+                        byte yByte = ParentVM.ram.memory[yAddr + i];
+
+                        if (xByte != yByte)
+                        {
+                            equal = false;
+                            break;
+                        }
+
+                        if (xByte == 0x00)
+                        {
+                            // Both strings terminated at the same position with every
+                            // byte equal so far: they match.
+                            break;
+                        }
+
+                        i++;
+                    }
+
+                    ParentVM.SetSplit('B', equal ? 1 : 0);
+                }
+                else if (ParentVM.AL == 0x04)
+                {
+                    // Atoi: parse a signed decimal integer from the null-terminated
+                    // string at address X into Y. An optional leading '+' or '-' is
+                    // read first, then one or more ASCII digits; parsing stops at the
+                    // first non-digit or the terminator. No valid digits at all (an
+                    // empty string, or one starting with neither a sign nor a digit)
+                    // is defined, not undefined, behaviour: Y = 0, the same convention
+                    // C's own atoi uses for unparseable input.
+                    int limit = ParentVM.ram.memory.Length;
+                    int addr = ParentVM.X;
+
+                    if (addr < 0 || addr >= limit)
+                    {
+                        Globals.console.WriteLine("SWI 0x01: atoi address out of range\nHalting for protection of data");
+                        ParentVM.Halt();
+                        return;
+                    }
+
+                    bool negative = false;
+                    byte first = ParentVM.ram.memory[addr];
+
+                    if (first == (byte)'-' || first == (byte)'+')
+                    {
+                        negative = first == (byte)'-';
+                        addr++;
+                    }
+
+                    int result = 0;
+                    bool sawDigit = false;
+
+                    while (addr < limit)
+                    {
+                        byte b = ParentVM.ram.memory[addr];
+
+                        if (b < (byte)'0' || b > (byte)'9')
+                        {
+                            break;
+                        }
+
+                        // Unchecked, like every other arithmetic instruction this VM
+                        // has: a value too large to fit wraps rather than throwing.
+                        result = (result * 10) + (b - (byte)'0');
+                        sawDigit = true;
+                        addr++;
+                    }
+
+                    ParentVM.Y = sawDigit ? (negative ? -result : result) : 0;
                 }
                 else
                 {
