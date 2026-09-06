@@ -1,0 +1,24 @@
+; loop_counter.cil
+;
+; The simplest possible loop: prints 1 through 10, one per line. A natural
+; first stop after hello_world_db.cil for seeing a real JMP-based loop and a
+; TMT/JMT termination check, and a good one to single-step in Caca Studio —
+; small enough to watch X change on every iteration.
+
+        JMP     main
+
+main:
+        MOV     X, 1            ; counter
+loop:
+        MOV     Y, 10
+        TMT     X, Y            ; counter > 10?
+        JMT     done
+        MOV     AL, 0x06        ; write signed 32-bit integer
+        KEI     0x01
+        MOV     AL, 0x01
+        MOV     AH, 0x0A
+        KEI     0x01
+        INC     X
+        JMP     loop
+done:
+        KEI     0x02

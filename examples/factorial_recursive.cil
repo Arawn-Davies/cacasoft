@@ -1,0 +1,46 @@
+; factorial_recursive.cil
+;
+; Computes 6! (720) via genuine recursion: CLL/RET, with the argument passed
+; on the hardware stack and the result returned in X. Hand-written, not
+; compiler output — the same convention cacalang's own CacaVM backend uses
+; (docs/architecture.md, "The CacaVM backend"), stripped down to see plainly.
+;
+; Two things worth stepping through in Caca Studio's debugger here:
+;   - the argument is a single PSH'd byte (fine for n <= 255; a real compiler
+;     targeting this VM has to pack/unpack a full 32-bit argument four bytes
+;     at a time instead — see CilEmitter.cs's PushArgument for why)
+;   - Y holds "this invocation's n", and since Y is an ordinary register with
+;     no automatic save-per-call, a recursive call WOULD clobber it if it
+;     weren't explicitly saved (PSH) before recursing and restored (POP)
+;     after — recursion needs that discipline by hand here, where a
+;     register-poor real ISA gives a compiler no register to spare for it
+;     either (see CilEmitter.cs's remarks on why it has no frame pointer).
+
+        JMP     main
+
+main:
+        MOV     X, 6
+        PSH     X               ; push n = 6
+        CLL     factorial       ; factorial pops its own argument; result in X
+        MOV     AL, 0x06
+        KEI     0x01            ; 720
+        KEI     0x02
+
+; factorial(n): n arrives as a single pushed byte, popped immediately.
+; Base case (n < 2): return 1. Otherwise: n * factorial(n - 1).
+factorial:
+        POP     Y               ; Y = n
+        MOV     X, 2
+        TLT     Y, X            ; n < 2?
+        JMF     recurse
+        MOV     X, 1
+        RET
+recurse:
+        PSH     Y               ; save n -- the recursive call below will clobber Y
+        MOV     X, Y
+        DEC     X               ; X = n - 1
+        PSH     X
+        CLL     factorial       ; X = factorial(n - 1)
+        POP     Y               ; restore n
+        MUL     X, Y            ; X = factorial(n - 1) * n
+        RET

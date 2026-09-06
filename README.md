@@ -73,6 +73,11 @@ The `/examples` folder contains ready-to-assemble `.cil` programs:
 | `calculator.cil` | Demonstrates arithmetic instructions and integer output |
 | `stdlib_demo.cil` | Signed 32-bit integer output, `atoi`, and `strcmp` — the standard library's newer additions |
 | `all_features.cil` | A section-by-section tour of every implemented instruction and standard library routine — the file to read alongside the wiki |
+| `loop_counter.cil` | The simplest JMP-based loop: prints 1 through 10 — a good first step-through after `hello_world_db.cil` |
+| `fizzbuzz.cil` | The classic, 1 to 20 — remainder computed by hand (no MOD opcode), and why the loop counter has to live in Y, not X |
+| `factorial_recursive.cil` | Genuine recursion via CLL/RET, argument on the stack, result in X — and why a recursive call must save/restore any register it still needs afterward |
+| `array_sum.cil` | Reads a small array of 32-bit integers by hand, four bytes at a time — the technique behind every local and parameter CilEmitter.cs addresses |
+| `interactive_double.cil` | Reads a line, parses it with `atoi`, prints double it — the one example meant to be run directly, not read fixed output from |
 
 Open any `.cil` file in Caca Studio to assemble, run, and step-debug it interactively.
 

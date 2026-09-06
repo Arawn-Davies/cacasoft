@@ -1,0 +1,78 @@
+; array_sum.cil
+;
+; Sums a small array of 32-bit integers (5, 10, 15, 20, 25 -> 75). MOE only
+; ever reads one byte, so reading a 32-bit element means reading four bytes
+; at consecutive addresses and reconstructing them by hand, MSB first -- the
+; exact technique CilEmitter.cs's LoadSlot uses for every local and
+; parameter it addresses, shown here without a compiler.
+;
+; Register pressure forces a PSH/POP around each element: only X and Y are
+; wide enough to hold a 32-bit value, X is needed to compute the element's
+; address fresh for each of the 4 bytes (recomputed each time rather than
+; held across all 4 reads -- there is no register to spare for both), and Y
+; is needed both as the running sum AND as the per-element accumulator. The
+; running sum is saved on the stack for the few instructions Y is repurposed.
+
+        JMP     main
+
+numbers:
+        DB      0x05, 0x00, 0x00, 0x00    ; 5
+        DB      0x0A, 0x00, 0x00, 0x00    ; 10
+        DB      0x0F, 0x00, 0x00, 0x00    ; 15
+        DB      0x14, 0x00, 0x00, 0x00    ; 20
+        DB      0x19, 0x00, 0x00, 0x00    ; 25
+
+main:
+        MOV     Y, 0            ; running sum
+        MOV     C, 0            ; index, 0..4
+sum_loop:
+        MOV     X, 4
+        TMT     C, X            ; index > 4 (i.e. all 5 elements done)?
+        JMT     done
+
+        PSH     Y               ; save the running sum -- Y is about to become the element accumulator
+
+        MOV     Y, 0
+        MOV     X, C
+        MUL     X, 4
+        ADD     X, numbers
+        ADD     X, 3
+        MOE     X, X            ; byte 3 (MSB)
+        SHL     Y, 8
+        BOR     Y, X
+
+        MOV     X, C
+        MUL     X, 4
+        ADD     X, numbers
+        ADD     X, 2
+        MOE     X, X            ; byte 2
+        SHL     Y, 8
+        BOR     Y, X
+
+        MOV     X, C
+        MUL     X, 4
+        ADD     X, numbers
+        ADD     X, 1
+        MOE     X, X            ; byte 1
+        SHL     Y, 8
+        BOR     Y, X
+
+        MOV     X, C
+        MUL     X, 4
+        ADD     X, numbers
+        MOE     X, X            ; byte 0 (LSB)
+        SHL     Y, 8
+        BOR     Y, X            ; Y now holds numbers[index]
+
+        MOV     X, Y            ; save the element value
+        POP     Y               ; restore the running sum
+        ADD     Y, X            ; sum += element
+
+        INC     C
+        JMP     sum_loop
+
+done:
+        MOV     X, Y
+        MOV     AL, 0x06
+        KEI     0x01            ; 75
+        KEI     0x02

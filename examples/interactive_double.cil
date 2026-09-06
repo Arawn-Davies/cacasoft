@@ -1,0 +1,60 @@
+; interactive_double.cil
+;
+; Reads a line from stdin, parses it as a signed integer, and prints double
+; it. The one example here that actually talks to a person rather than
+; printing a fixed, checkable sequence -- run it directly (not through an
+; automated test) and type a number:
+;
+;   dotnet Caca.VM.Cli.dll examples/interactive_double.cil
+;
+; Combines KEI 0x01 AL=0x04 (read a line into RAM) with SWI 0x01 AL=0x04
+; (atoi) -- the same pairing cacalang's read_int compiles to
+; (CilEmitter.cs's EmitReadInt), written out by hand here.
+;
+; The read buffer is a plain literal address (0x2000), not a DB-declared
+; label: DB data is part of the loaded program image, which is read-only
+; once running (see wiki/Spec-Architecture.md Section 4) -- there is nothing
+; to declare a WRITABLE buffer with except a bare address comfortably past
+; wherever this small program's own code ends. It also isn't stack-relative
+; like EmitReadInt's buffer: this program has no caller and never returns,
+; so there is no stack frame for the buffer to belong to.
+
+        JMP     main
+
+main:
+        MOV     AL, 0x02
+        MOV     X,  prompt
+        MOV     B,  16
+        KEI     0x01
+
+        MOV     AL, 0x04
+        MOV     X,  0x2000              ; well clear of this program's own code
+        KEI     0x01                    ; read a line; B = bytes read
+
+        MOV     Y, B
+        MOV     X, 0x2000
+        ADD     X, Y
+        MOM     0x00, X                 ; null-terminate, matching atoi's expectation
+
+        MOV     AL, 0x04
+        MOV     X, 0x2000
+        SWI     0x01                    ; Y = parsed integer
+        ADD     Y, Y                    ; double it
+
+        MOV     AL, 0x02
+        MOV     X, result
+        MOV     B, 8
+        KEI     0x01                    ; "Double: "
+        MOV     X, Y
+        MOV     AL, 0x06
+        KEI     0x01                    ; the doubled value
+        MOV     AL, 0x01
+        MOV     AH, 0x0A
+        KEI     0x01
+
+        KEI     0x02
+
+prompt:
+        DB      "Enter a number: ", 0x00
+result:
+        DB      "Double: ", 0x00

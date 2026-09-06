@@ -1,0 +1,91 @@
+; fizzbuzz.cil
+;
+; The classic: 1 to 20, "Fizz" for multiples of 3, "Buzz" for multiples of 5,
+; "FizzBuzz" for both, the number otherwise. No MOD opcode exists, so each
+; remainder is computed by hand: r = n - (n/15)*15, etc.
+;
+; The loop counter lives in Y, not X — X is needed as the address register
+; for KEI 0x01's write-string mode, and reusing the counter's own register
+; for that would lose the count. A register-scarcity lesson worth having in
+; an example, not just in the emitter that first ran into it.
+
+        JMP     main
+
+s_fizz:
+        DB      "Fizz", 0x0A, 0x00
+s_buzz:
+        DB      "Buzz", 0x0A, 0x00
+s_fizzbuzz:
+        DB      "FizzBuzz", 0x0A, 0x00
+
+main:
+        MOV     Y, 1            ; loop counter
+loop:
+        MOV     X, 20
+        TMT     Y, X            ; counter > 20?
+        JMT     done
+
+        ; remainder = Y mod 15, using X as scratch/quotient and C as the result
+        MOV     X, Y
+        DIV     X, 15
+        MUL     X, 15
+        MOV     C, Y
+        SUB     C, X
+        MOV     X, 0
+        TEQ     C, X
+        JMT     print_fizzbuzz
+
+        ; remainder = Y mod 3
+        MOV     X, Y
+        DIV     X, 3
+        MUL     X, 3
+        MOV     C, Y
+        SUB     C, X
+        MOV     X, 0
+        TEQ     C, X
+        JMT     print_fizz
+
+        ; remainder = Y mod 5
+        MOV     X, Y
+        DIV     X, 5
+        MUL     X, 5
+        MOV     C, Y
+        SUB     C, X
+        MOV     X, 0
+        TEQ     C, X
+        JMT     print_buzz
+
+        ; neither: print the number itself
+        MOV     X, Y
+        MOV     AL, 0x06
+        KEI     0x01
+        MOV     AL, 0x01
+        MOV     AH, 0x0A
+        KEI     0x01
+        JMP     next
+
+print_fizzbuzz:
+        MOV     AL, 0x02
+        MOV     X,  s_fizzbuzz
+        MOV     B,  9
+        KEI     0x01
+        JMP     next
+
+print_fizz:
+        MOV     AL, 0x02
+        MOV     X,  s_fizz
+        MOV     B,  5
+        KEI     0x01
+        JMP     next
+
+print_buzz:
+        MOV     AL, 0x02
+        MOV     X,  s_buzz
+        MOV     B,  5
+        KEI     0x01
+
+next:
+        INC     Y
+        JMP     loop
+done:
+        KEI     0x02
