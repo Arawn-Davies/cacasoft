@@ -17,6 +17,26 @@ enum CacalangCompiler {
         var diagnostics: String?
     }
 
+    /// Locates cacalang's own bundled samples directory (github.com/Arawn-
+    /// Davies/cacalang, `samples/*.caca`) — the same files cacalang's own
+    /// test suite already verifies against `--target cacavm`, reused here
+    /// as Load Example entries rather than separately-maintained copies
+    /// that could silently drift out of sync with the compiler.
+    static func findSamplesDir() -> URL? {
+        var dir = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
+        while dir.pathComponents.count > 1 {
+            if dir.lastPathComponent == "Artemis-IL" {
+                let candidate = dir.deletingLastPathComponent()
+                    .appendingPathComponent("cacalang/samples")
+                var isDirectory: ObjCBool = false
+                let exists = FileManager.default.fileExists(atPath: candidate.path, isDirectory: &isDirectory)
+                return (exists && isDirectory.boolValue) ? candidate : nil
+            }
+            dir = dir.deletingLastPathComponent()
+        }
+        return nil
+    }
+
     /// Locates cacalang's built CLI assembly (named `caca.dll`, from the
     /// `Caca.Cli` project). Checked lazily, once, since this only matters
     /// the moment someone opens a `.caca` file.

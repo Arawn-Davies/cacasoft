@@ -115,8 +115,14 @@ namespace Caca.VM.Studio
                 ForeColor = Color.FromArgb(0xCC, 0xCC, 0xCC),
                 BackColor = Color.FromArgb(0x2D, 0x2D, 0x30),
             };
-            AddItem(examples, "&Hello World",  "", (_, _) => LoadExample(ExampleHelloWorld));
-            AddItem(examples, "&Calculator",   "", (_, _) => LoadExample(ExampleCalculator));
+            AddItem(examples, "CIL: &Hello World",  "", (_, _) => LoadExample(ExampleHelloWorld));
+            AddItem(examples, "CIL: &Calculator",   "", (_, _) => LoadExample(ExampleCalculator));
+#if CACALANG_SUPPORT
+            examples.DropDownItems.Add(new ToolStripSeparator());
+            AddItem(examples, "cacalang: Hello &World",   "", (_, _) => LoadCacalangExample("helloworld"));
+            AddItem(examples, "cacalang: &Loop Counter",  "", (_, _) => LoadCacalangExample("loop"));
+            AddItem(examples, "cacalang: &FizzBuzz",      "", (_, _) => LoadCacalangExample("fizzbuzz"));
+#endif
             file.DropDownItems.Add(examples);
             file.DropDownItems.Add(new ToolStripSeparator());
             AddItem(file, "&Save",         "Ctrl+S", (_, _) => Save());
@@ -207,8 +213,13 @@ namespace Caca.VM.Studio
             AddTool(CreateIcon("💾"), "Save file (Ctrl+S)",        () => Save());
             AddDropDownTool(CreateIcon("📚"), "Load a built-in example", new (string, Action)[]
             {
-                ("Hello World", () => LoadExample(ExampleHelloWorld)),
-                ("Calculator",  () => LoadExample(ExampleCalculator)),
+                ("CIL: Hello World", () => LoadExample(ExampleHelloWorld)),
+                ("CIL: Calculator",  () => LoadExample(ExampleCalculator)),
+#if CACALANG_SUPPORT
+                ("cacalang: Hello World",  () => LoadCacalangExample("helloworld")),
+                ("cacalang: Loop Counter", () => LoadCacalangExample("loop")),
+                ("cacalang: FizzBuzz",     () => LoadCacalangExample("fizzbuzz")),
+#endif
             });
             _toolbar.Items.Add(new ToolStripSeparator());
             AddTool(CreateIcon("⚙️"), "Compile to .ilc (F5)",      () => Compile());
@@ -602,6 +613,62 @@ namespace Caca.VM.Studio
             _sourceCacaPath = path;
             SetTitle();
             ApplySyntaxHighlighting();
+        }
+
+        /// <summary>
+        /// Loads one of cacalang's own bundled samples (github.com/Arawn-Davies/
+        /// cacalang, samples/*.caca) by name, through the exact same
+        /// OpenCacalang path a real file would take — these are the same
+        /// files cacalang's own test suite already verifies against
+        /// --target cacavm, not separately-maintained copies that could
+        /// silently drift out of sync with the compiler.
+        /// </summary>
+        private void LoadCacalangExample(string sampleName)
+        {
+            if (!ConfirmDiscard()) return;
+
+            string? samplesDir = FindCacalangSamplesDir();
+            if (samplesDir == null)
+            {
+                ClearOutput();
+                AppendOutput(
+                    "cacalang samples not found — check out a sibling ../cacalang next to this repo.\n",
+                    COutputError);
+                return;
+            }
+
+            string path = Path.Combine(samplesDir, sampleName + ".caca");
+            if (!File.Exists(path))
+            {
+                ClearOutput();
+                AppendOutput($"cacalang sample not found: {path}\n", COutputError);
+                return;
+            }
+
+            OpenCacalang(path);
+        }
+
+        /// <summary>
+        /// Walks up from the running assembly's own directory looking for
+        /// "Artemis-IL" (this repo's own folder name), then checks that
+        /// directory's sibling ../cacalang/samples — the same sibling-
+        /// checkout convention used everywhere else cacalang and CacaVM
+        /// discover each other (see this project's own CACALANG_SUPPORT
+        /// MSBuild property, and cacalang's CacaVM CLI test discovery).
+        /// </summary>
+        private static string? FindCacalangSamplesDir()
+        {
+            var dir = new DirectoryInfo(AppContext.BaseDirectory);
+            while (dir != null)
+            {
+                if (string.Equals(dir.Name, "Artemis-IL", StringComparison.Ordinal))
+                {
+                    string candidate = Path.Combine(dir.Parent?.FullName ?? "", "cacalang", "samples");
+                    return Directory.Exists(candidate) ? candidate : null;
+                }
+                dir = dir.Parent;
+            }
+            return null;
         }
 #endif
 

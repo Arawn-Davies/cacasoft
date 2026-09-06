@@ -18,8 +18,15 @@ struct CacaStudioMacApp: App {
                     .keyboardShortcut("o", modifiers: .command)
                 Divider()
                 Menu("Load Example") {
-                    ForEach(Example.allCases) { example in
-                        Button(example.rawValue) { appState.loadExample(example) }
+                    Section("CIL") {
+                        ForEach(Example.allCases) { example in
+                            Button(example.rawValue) { appState.loadExample(example) }
+                        }
+                    }
+                    Section("cacalang") {
+                        ForEach(CacalangExample.allCases) { example in
+                            Button(example.rawValue) { appState.loadCacalangExample(example) }
+                        }
                     }
                 }
                 Divider()

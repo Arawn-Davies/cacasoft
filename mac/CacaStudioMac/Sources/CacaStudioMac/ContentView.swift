@@ -37,8 +37,15 @@ struct ContentView: View {
                 Button("Open…", systemImage: "folder") { appState.open() }
                 Button("Save", systemImage: "square.and.arrow.down") { appState.save() }
                 Menu("Examples", systemImage: "text.book.closed") {
-                    ForEach(Example.allCases) { example in
-                        Button(example.rawValue) { appState.loadExample(example) }
+                    Section("CIL") {
+                        ForEach(Example.allCases) { example in
+                            Button(example.rawValue) { appState.loadExample(example) }
+                        }
+                    }
+                    Section("cacalang") {
+                        ForEach(CacalangExample.allCases) { example in
+                            Button(example.rawValue) { appState.loadCacalangExample(example) }
+                        }
                     }
                 }
                 Divider()

@@ -264,7 +264,6 @@ namespace Caca.VM.Studio
         {
             SendMessage(_memBox.Handle, WM_SETREDRAW, false, 0);
 
-            int savedStart = _memBox.SelectionStart;
             _memBox.Clear();
 
             int codeEnd = _vm.ram.RAMLimit;
@@ -326,14 +325,15 @@ namespace Caca.VM.Studio
                 _memBox.SelectionBackColor = CBg;
             }
 
-            // Scroll to IP row
+            // Scroll to IP row — must be the last thing set on SelectionStart
+            // before redraw is re-enabled below, or whatever runs after this
+            // silently overrides it before the control ever gets to show it.
             if (ipCharStart >= 0)
             {
                 _memBox.SelectionStart = ipCharStart;
                 _memBox.ScrollToCaret();
             }
 
-            _memBox.SelectionStart = savedStart;
             SendMessage(_memBox.Handle, WM_SETREDRAW, true, 0);
             _memBox.Invalidate();
         }

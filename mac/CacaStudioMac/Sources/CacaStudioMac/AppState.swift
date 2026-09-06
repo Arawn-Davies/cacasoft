@@ -208,6 +208,28 @@ final class AppState: ObservableObject {
         loadedExampleName = example.rawValue
     }
 
+    /// Loads one of cacalang's own bundled samples through the exact same
+    /// openCacalang path a real file would take — see CacalangExample and
+    /// CacalangCompiler.findSamplesDir.
+    func loadCacalangExample(_ example: CacalangExample) {
+        guard confirmDiscard() else { return }
+
+        guard let samplesDir = CacalangCompiler.findSamplesDir() else {
+            clearOutput()
+            appendOutput("cacalang samples not found — check out a sibling ../cacalang next to this repo.\n", .error)
+            return
+        }
+
+        let path = samplesDir.appendingPathComponent(example.fileName + ".caca")
+        guard FileManager.default.fileExists(atPath: path.path) else {
+            clearOutput()
+            appendOutput("cacalang sample not found: \(path.path)\n", .error)
+            return
+        }
+
+        openCacalang(path)
+    }
+
     private func cilContentTypes() -> [UTType] {
         [UTType(filenameExtension: "cil"), UTType(filenameExtension: "asm")].compactMap { $0 }
     }

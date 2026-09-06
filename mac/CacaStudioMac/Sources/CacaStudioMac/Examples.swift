@@ -1,6 +1,26 @@
 import Foundation
 
-/// Built-in example sources — ported verbatim from Caca.VM.Studio/MainForm.cs
+/// cacalang examples for Load Example — by name only; the actual source
+/// lives in cacalang's own `samples/*.caca` (see CacalangCompiler.findSamplesDir),
+/// not duplicated here, so these can never silently drift out of sync with
+/// what cacalang's own test suite verifies against --target cacavm.
+enum CacalangExample: String, CaseIterable, Identifiable {
+    case helloWorld = "Hello World"
+    case loopCounter = "Loop Counter"
+    case fizzBuzz = "FizzBuzz"
+
+    var id: String { rawValue }
+
+    var fileName: String {
+        switch self {
+        case .helloWorld: return "helloworld"
+        case .loopCounter: return "loop"
+        case .fizzBuzz: return "fizzbuzz"
+        }
+    }
+}
+
+/// Built-in CIL example sources — ported verbatim from Caca.VM.Studio/MainForm.cs
 /// (ExampleHelloWorld / ExampleCalculator), so the same programs are available
 /// from File > Load Example in both IDEs.
 enum Example: String, CaseIterable, Identifiable {
