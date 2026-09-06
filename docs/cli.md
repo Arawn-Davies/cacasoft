@@ -91,6 +91,30 @@ serial port and reads a keyboard through the PS/2 controller — which
 [`boot/`](../boot/README.md) turns into a GRUB-bootable ISO and boots in
 QEMU, with no operating system involved at any point.
 
+## Compiling to CacaVM
+
+`--target cacavm` writes the program as CIL assembly source — the language of
+[CacaVM](https://github.com/Arawn-Davies/CacaVM), a small register-based
+virtual machine — instead of an assembly:
+
+```sh
+caca build samples/primes.caca --target cacavm -o primes.cil
+dotnet Caca.VM.Cli.dll primes.cil
+```
+
+This is a fourth backend, and the only one that does not live inside
+`Caca.Compiler` — it depends on the compiler's public types, but the compiler
+does not depend on it; see `src/Caca.CilBackend/CilEmitter.cs`'s own remarks.
+
+CacaVM has no floating point unit and no instructions for it, so `--target
+cacavm` rejects any program using `float` (`CACA0027`), the same way `extern
+func` is rejected for having no CLR to call into (`CACA0026`). A `string` may
+only appear as the literal, direct operand of `print` — not as a variable,
+parameter, return value, or in a comparison or concatenation (`CACA0028`) —
+and `read_int`/`read_string` are rejected outright (`CACA0029`): there is no
+integer-parsing or line-input routine yet. Every program that survives these
+restrictions is held to the same parity standard as the other backends.
+
 ## Referencing a C# assembly
 
 `--ref` names a .NET assembly that [`extern func`](language.md#calling-net)

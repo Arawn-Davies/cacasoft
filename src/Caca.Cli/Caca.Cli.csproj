@@ -13,6 +13,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Caca.Compiler\Caca.Compiler.csproj" />
+    <ProjectReference Include="..\Caca.CilBackend\Caca.CilBackend.csproj" />
   </ItemGroup>
 
 </Project>

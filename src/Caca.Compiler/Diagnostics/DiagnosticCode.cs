@@ -35,4 +35,8 @@ public enum DiagnosticCode
     ExternTargetNotFound = 23,
     ExternReturnTypeMismatch = 24,
     ExternNotAvailableInC = 25,
+    ExternNotAvailableInCacaVm = 26,
+    FloatNotAvailableInCacaVm = 27,
+    StringNotLiteralInCacaVm = 28,
+    ReadNotAvailableInCacaVm = 29,
 }

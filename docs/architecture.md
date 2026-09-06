@@ -120,13 +120,53 @@ turns a `--target c-freestanding` file into a GRUB-bootable ISO and boots it
 in QEMU, headless or in a window. Floats and extern functions are not part of
 that runtime yet; see `boot/README.md`.
 
+## The CacaVM backend
+
+`src/Caca.CilBackend/CilEmitter.cs` renders the same type-checked tree as CIL
+assembly source, the language of [CacaVM](https://github.com/Arawn-Davies/CacaVM) —
+a small register-based virtual machine, a separate project: `caca build
+--target cacavm`. It is the only backend that does not live inside
+`Caca.Compiler` — it is its own project, depending on the compiler's public
+AST and binding types without the compiler depending on it back. Only
+`Caca.Cli`, which already references both, wires them together.
+
+CacaVM's instruction set forced a real design problem the other backends
+never meet: five registers, only two of them (`X`, `Y`) wide enough for a
+32-bit `int`; every memory and stack access one byte at a time; and no
+frame-pointer register to spare, since expression evaluation already needs
+both wide registers free. Locals and parameters are therefore addressed
+relative to the *current* stack pointer using an offset the emitter tracks at
+compile time as it walks the tree (`_depth`) — the same technique a
+stack-machine compiler uses to track operand-stack depth — and every 32-bit
+value crossing memory or the stack is packed and unpacked four bytes by hand.
+`CilEmitter.cs`'s own remarks describe the register discipline this requires
+in full; getting it wrong is exactly what a wrong-byte-order argument, a
+clobbered scratch register, or a branch condition backwards look like, and all
+three turned up during development, each caught only by actually running the
+emitted code on the VM — a lesson recorded in the emitter's own comments at
+each site, not just fixed silently.
+
+The v1 subset this backend covers is deliberately narrower than the other
+three: CacaVM has no floating point unit or instructions for one at all, so
+`float` is rejected (`CACA0027`), the same way `extern func` is rejected for
+having no CLR to call into (`CACA0026`). A `string` may only appear as the
+literal, direct operand of `print` (`CACA0028`) — not as a variable,
+parameter, return value, or in a comparison or concatenation — and
+`read_int`/`read_string` are rejected outright (`CACA0029`), since no
+integer-parsing or line-input routine exists yet. Everything else — control
+flow, recursion, arithmetic with the same 32-bit wraparound as the other
+backends, `%` synthesized from `/` and `*` since CacaVM has no MOD opcode —
+is held to the same parity standard as the rest of the language.
+
 ## The backends must agree
 
-Every language feature is implemented in each backend, and a set of parity
-tests runs the same program through all of them and compares the output. This
-is the single most useful class of test in the project: it is what catches an
-emitter that produces IL the runtime rejects, or C a compiler refuses, or that
-quietly computes something different.
+Every language feature is implemented in each backend — CacaVM's v1 subset
+of it, at least — and a set of parity tests runs the same program through all
+of them and compares the output. This is the single most useful class of test
+in the project: it is what catches an emitter that produces IL the runtime
+rejects, C a compiler refuses, or CIL the VM runs but computes something
+different — the CacaVM parity tests run the emitted CIL on the actual VM,
+not just on inspected text, for exactly that reason.
 
 ## Language server
 
@@ -150,6 +190,7 @@ few dozen lines, and this project is meant to be read.
 | IL emitter, and the symbols it writes | `src/Caca.Compiler/Emit/IlEmitter.cs` |
 | C emitter and its runtime | `src/Caca.Compiler/Emit/CEmitter.cs`, `Emit/CRuntime.cs` |
 | The native launcher | `src/Caca.Compiler/Emit/AppHost.cs` |
+| CacaVM (CIL) emitter | `src/Caca.CilBackend/CilEmitter.cs` |
 | Language server | `src/Caca.LanguageServer/` |
 
 ## Where things are
@@ -161,6 +202,7 @@ few dozen lines, and this project is meant to be read.
 | `src/Caca.Compiler/Diagnostics` | Locations, codes, the bag |
 | `src/Caca.Compiler/Runtime` | The interpreter |
 | `src/Caca.Compiler/Emit` | The IL and C emitters, and the apphost writer |
+| `src/Caca.CilBackend` | The CacaVM (CIL) emitter — outside `Caca.Compiler` on purpose |
 | `src/Caca.LanguageServer` | LSP server and protocol |
 | `src/Caca.Cli` | The `caca` command and the REPL |
 | `editors/vscode` | The VS Code extension |

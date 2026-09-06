@@ -27,18 +27,24 @@ order:
    the feature is a statement a debugger should stop on.
 6. **The C emitter**, in `Emit/CEmitter.cs`, and its runtime in
    `Emit/CRuntime.cs` if the feature needs the outside world.
-7. **Tests**: the behaviour through the interpreter, the errors it can produce,
+7. **The CacaVM emitter**, in `src/Caca.CilBackend/CilEmitter.cs` — unless the
+   feature falls outside the v1 subset that backend covers (`float`, anything
+   with `string` beyond a literal print, `read_int`/`read_string`), in which
+   case reject it there with its own diagnostic instead, the way `extern func`
+   already is.
+8. **Tests**: the behaviour through the interpreter, the errors it can produce,
    and the same programs through the emitters.
-8. **Documentation**: [`docs/grammar.md`](docs/grammar.md) and
+9. **Documentation**: [`docs/grammar.md`](docs/grammar.md) and
    [`docs/language.md`](docs/language.md), plus
    [`docs/diagnostics.md`](docs/diagnostics.md) for any new code.
 
 ### The parity rule
 
-Every backend must produce identical output for every program.
-`EmitterTests.Both_backends_produce_the_same_output` asserts it for the IL
-backend and `CEmitterTests.C_backend_matches_the_interpreter` for the C one;
-add cases to both.
+Every backend must produce identical output for every program its restrictions
+allow. `EmitterTests.Both_backends_produce_the_same_output` asserts it for the
+IL backend, `CEmitterTests.C_backend_matches_the_interpreter` for the C one,
+and `CilEmitterTests.CacaVm_backend_matches_the_interpreter` for CacaVM's v1
+subset; add cases to all three unless the feature is out of CacaVM's scope.
 
 If a rule cannot be expressed in emitted IL — formatting a float, for instance —
 generate a method into the assembly rather than letting the two drift apart.

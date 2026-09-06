@@ -5,6 +5,7 @@
 
 using System.Reflection;
 using Caca;
+using Caca.CilBackend;
 using Caca.Runtime;
 
 namespace Caca.Cli;
@@ -181,10 +182,10 @@ internal static class Program
 
                 target = rest[++i];
 
-                if (target is not ("il" or "c" or "c-freestanding"))
+                if (target is not ("il" or "c" or "c-freestanding" or "cacavm"))
                 {
                     Console.Error.WriteLine(
-                        $"error: unknown target '{target}'; the targets are 'il', 'c' and 'c-freestanding'");
+                        $"error: unknown target '{target}'; the targets are 'il', 'c', 'c-freestanding' and 'cacavm'");
                     return ExitUsageError;
                 }
             }
@@ -202,6 +203,11 @@ internal static class Program
         if (target is "c" or "c-freestanding")
         {
             return BuildC(compilation, positional[0], outputPath, freestanding: target is "c-freestanding");
+        }
+
+        if (target is "cacavm")
+        {
+            return BuildCacaVm(compilation, positional[0], outputPath);
         }
 
         // The runnable file keeps the .exe name the language has always used,
@@ -299,6 +305,36 @@ internal static class Program
         Console.WriteLine(freestanding
             ? $"Boot it with: boot/run-qemu.sh {outputPath}"
             : $"Build it with: cc {outputPath} -o {name}");
+        return ExitSuccess;
+    }
+
+    /// <summary>
+    /// Writes the program as CIL assembly source instead of an assembly.
+    /// Calls <see cref="CilEmitter"/> directly rather than through
+    /// <see cref="Compilation"/> — the CacaVM backend lives outside
+    /// Caca.Compiler entirely (see Caca.CilBackend's own remarks), so only
+    /// this CLI, which already references both, wires them together.
+    /// </summary>
+    private static int BuildCacaVm(Compilation compilation, string sourcePath, string? outputPath)
+    {
+        outputPath ??= Path.ChangeExtension(Path.GetFileName(sourcePath), ".cil");
+        var diagnostics = CilEmitter.Emit(compilation.Program, compilation.Functions, out var text);
+
+        if (diagnostics.Count > 0)
+        {
+            foreach (var diagnostic in diagnostics)
+            {
+                Console.Error.WriteLine(diagnostic.Format(compilation.FileName));
+            }
+
+            var count = diagnostics.Count;
+            Console.Error.WriteLine($"{count} error{(count == 1 ? string.Empty : "s")}.");
+            return ExitCompileError;
+        }
+
+        File.WriteAllText(outputPath, text);
+        Console.WriteLine($"Compiled {compilation.FileName} to {outputPath}");
+        Console.WriteLine($"Run it with a CacaVM host, e.g.: dotnet Caca.VM.Cli.dll {outputPath}");
         return ExitSuccess;
     }
 
@@ -407,7 +443,9 @@ internal static class Program
             Options:
               -o, --output <path>   Where to write the executable (default: <file>.exe)
               -t, --target <name>   What 'build' produces: 'il' (default), a .NET
-                                    assembly, or 'c', a self-contained C file
+                                    assembly; 'c', a self-contained C file; or
+                                    'cacavm', CIL assembly source for the
+                                    CacaVM virtual machine
               -r, --ref <path>      A .NET assembly extern functions may bind to;
                                     repeat for more than one
                   --no-launcher     Emit only the assembly, to be run with 'dotnet'
