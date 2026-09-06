@@ -88,6 +88,22 @@
             "group": "build",
             "presentation": { "reveal": "always" },
             "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "cil: publish language server",
+            "command": "dotnet publish ${workspaceFolder}/source/Caca.VM.LanguageServer -c Release -o ${workspaceFolder}/artifacts/langserver",
+            "type": "shell",
+            "group": "build",
+            "presentation": { "reveal": "silent" },
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "cil: run current file",
+            "command": "dotnet run --project ${workspaceFolder}/source/Caca.VM.Cli -- ${file}",
+            "type": "shell",
+            "group": "test",
+            "presentation": { "reveal": "always", "panel": "dedicated" },
+            "problemMatcher": "$cil"
         }
     ]
 }

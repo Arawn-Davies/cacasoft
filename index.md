@@ -7,7 +7,7 @@ This site mirrors the [GitHub Wiki](wiki/Home) for the Caca Intermediate Languag
 | Page | Description |
 |------|-------------|
 | [Home / Getting Started](wiki/Home) | Project overview, build instructions, and quick-start guide |
-| [Specification](wiki/Specification) | CIL v2.0 architecture overview and links to section pages |
+| [Specification](wiki/Specification) | CIL v2.1 architecture overview and links to section pages |
 | [Architecture](wiki/Spec-Architecture) | Memory model, instruction encoding, registers, and the stack (§1–§4) |
 | [Instructions](wiki/Spec-Instructions) | Program flow, full instruction reference, and quick-reference table (§5–§7) |
 | [Executable Format](wiki/Spec-Executable-Format) | Binary `.ilc` file format (§8) |
@@ -23,3 +23,5 @@ Source code is kept in the `/source/` folder. The `/wiki/` folder in this reposi
 | `source/Caca.VM.Cli` | Command-line runtime — compiles and runs `.cil` source directly, or loads pre-compiled bytecode |
 | `source/Caca.VM.Studio` | WinForms IDE — assembler, decompiler, and step-through debugger (Windows only) |
 | `source/Caca.VM.Tests` | xUnit test suite covering the VM, assembler, and decompiler |
+| `source/Caca.VM.LanguageServer` | Language Server Protocol implementation for CIL (live errors) |
+| `editors/vscode` | VS Code extension: syntax highlighting + the language server client |

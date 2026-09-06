@@ -16,6 +16,8 @@ For the full language and VM specification, standard library reference, and inst
 | `/source/Caca.VM.Cli` | Command-line runtime host (net10.0) |
 | `/source/Caca.VM.Studio` | WinForms IDE with assembler, decompiler, and step debugger (net10.0-windows) |
 | `/source/Caca.VM.Tests` | xUnit test suite |
+| `/source/Caca.VM.LanguageServer` | Language Server Protocol implementation for CIL (live errors) |
+| `/editors/vscode` | VS Code extension: syntax highlighting + the language server client |
 | `/wiki` | Mirror of the GitHub Wiki pages |
 | `/LICENSES` | License texts for this project and its FOSS dependencies |
 | `/examples` | Sample `.cil` assembly programs |
@@ -63,6 +65,14 @@ The `/examples` folder contains ready-to-assemble `.cil` programs:
 | `calculator.cil` | Demonstrates arithmetic instructions and integer output |
 
 Open any `.cil` file in Caca Studio to assemble, run, and step-debug it interactively.
+
+---
+
+## VS Code
+
+For editors other than Caca Studio, `/editors/vscode` provides syntax
+highlighting and live compile errors via a Language Server Protocol client.
+See [`editors/vscode/README.md`](editors/vscode/README.md) for setup.
 
 ---
 

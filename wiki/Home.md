@@ -6,7 +6,7 @@ Welcome to the CIL wiki. This wiki is the normative reference for the Caca Inter
 
 | Page | Description |
 |------|-------------|
-| [[Specification]] | CIL v2.0 specification overview and table of contents |
+| [[Specification]] | CIL v2.1 specification overview and table of contents |
 | [[Spec-Architecture]] | Memory model, instruction encoding, registers, and the stack (§1–§4) |
 | [[Spec-Instructions]] | Program flow, full instruction reference, and opcode quick-reference table (§5–§7) |
 | [[Spec-Executable-Format]] | Binary `.ilc` executable file format (§8) |
@@ -38,6 +38,8 @@ The Caca Intermediate Language (CIL) is a low-level, register-based intermediate
 | `source/Caca.VM.Cli` | Command-line runtime — compiles and runs `.cil` source directly, or loads pre-compiled bytecode |
 | `source/Caca.VM.Studio` | WinForms IDE — assembler, decompiler, and step-through debugger (Windows only) |
 | `source/Caca.VM.Tests` | xUnit test suite covering the VM, assembler, and decompiler |
+| `source/Caca.VM.LanguageServer` | Language Server Protocol implementation for CIL (live errors) |
+| `editors/vscode` | VS Code extension: syntax highlighting + the language server client |
 
 ## Getting started
 
@@ -77,6 +79,14 @@ dotnet run --project source/Caca.VM.Cli -- myprogram.cil
 A compile error is reported in `file(line,col): error CIL001: message` format and exits non-zero; anything else is loaded and executed as pre-compiled bytecode instead.
 
 On Windows, Caca Studio (`source/Caca.VM.Studio`) additionally provides a full IDE: open or type your CIL assembly source, press **Build & Run** to assemble and execute, or **Debug** to step through instructions.
+
+### Editing in VS Code
+
+For editors other than Caca Studio, `editors/vscode` provides syntax
+highlighting and live compile errors (no hover/definition/references —
+the assembler has no symbol table to query). See
+[`editors/vscode/README.md`](https://github.com/Arawn-Davies/CacaVM/blob/main/editors/vscode/README.md)
+for setup.
 
 
 

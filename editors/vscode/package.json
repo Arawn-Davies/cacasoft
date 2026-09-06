@@ -1,0 +1,80 @@
+{
+  "name": "cil",
+  "displayName": "CIL",
+  "description": "Language support for CIL, the CacaVM intermediate language: live errors and syntax highlighting.",
+  "version": "0.1.0",
+  "publisher": "cacavm",
+  "license": "BSD-3-Clause-Clear",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Arawn-Davies/CacaVM.git",
+    "directory": "editors/vscode"
+  },
+  "engines": {
+    "vscode": "^1.75.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "main": "./client.js",
+  "activationEvents": [
+    "onLanguage:cil"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "cil",
+        "aliases": [
+          "CIL",
+          "cil"
+        ],
+        "extensions": [
+          ".cil"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "cil",
+        "scopeName": "source.cil",
+        "path": "./syntaxes/cil.tmLanguage.json"
+      }
+    ],
+    "configuration": {
+      "title": "CIL",
+      "properties": {
+        "cil.server.path": {
+          "type": "string",
+          "default": "",
+          "description": "Path to the cil-langserver executable. Leave empty to use 'cil-langserver' from PATH."
+        }
+      }
+    },
+    "problemMatchers": [
+      {
+        "name": "cil",
+        "owner": "cil",
+        "fileLocation": [
+          "autoDetect",
+          "${workspaceFolder}"
+        ],
+        "pattern": {
+          "regexp": "^(.*)\\((\\d+),(\\d+)\\): (error|warning) (\\w+): (.*)$",
+          "file": 1,
+          "line": 2,
+          "column": 3,
+          "severity": 4,
+          "code": 5,
+          "message": 6
+        }
+      }
+    ]
+  },
+  "dependencies": {
+    "vscode-languageclient": "^9.0.1"
+  },
+  "extensionKind": [
+    "workspace"
+  ]
+}

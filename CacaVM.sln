@@ -10,6 +10,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Caca.VM.Studio", "source\Ca
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Caca.VM.Tests", "source\Caca.VM.Tests\Caca.VM.Tests.csproj", "{FBF8F0E3-3890-4EDC-B94A-A8FF1A3B441B}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Caca.VM.LanguageServer", "source\Caca.VM.LanguageServer\Caca.VM.LanguageServer.csproj", "{20F70BB5-1C2C-4DAE-8CF4-7C14565A42D2}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -32,6 +34,10 @@ Global
 		{FBF8F0E3-3890-4EDC-B94A-A8FF1A3B441B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{FBF8F0E3-3890-4EDC-B94A-A8FF1A3B441B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{FBF8F0E3-3890-4EDC-B94A-A8FF1A3B441B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{20F70BB5-1C2C-4DAE-8CF4-7C14565A42D2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{20F70BB5-1C2C-4DAE-8CF4-7C14565A42D2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{20F70BB5-1C2C-4DAE-8CF4-7C14565A42D2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{20F70BB5-1C2C-4DAE-8CF4-7C14565A42D2}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

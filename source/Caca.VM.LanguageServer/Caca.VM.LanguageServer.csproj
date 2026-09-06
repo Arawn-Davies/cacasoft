@@ -3,15 +3,15 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>Caca.VM.LanguageServer</RootNamespace>
+    <AssemblyName>cil-langserver</AssemblyName>
+    <Description>Language Server Protocol implementation for CIL (CacaVM).</Description>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\Caca.VM\Caca.VM.csproj" />
-  </ItemGroup>
-
-  <!-- Link the compiler source files (pure logic, no WinForms dependency) directly from
-       Caca.VM.Studio, same pattern Caca.VM.Tests uses — lets this CLI compile .cil source
-       directly instead of only running pre-compiled bytecode. -->
+  <!-- Link the compiler source files directly, same pattern Caca.VM.Cli and
+       Caca.VM.Tests use — diagnostics only need the assembler, not the VM runtime. -->
   <ItemGroup>
     <Compile Include="..\Caca.VM.Studio\Compiler\AddressModes.cs" />
     <Compile Include="..\Caca.VM.Studio\Compiler\BuildException.cs" />
@@ -20,4 +20,5 @@
     <Compile Include="..\Caca.VM.Studio\Compiler\Instruction.cs" />
     <Compile Include="..\Caca.VM.Studio\Compiler\Registers.cs" />
   </ItemGroup>
+
 </Project>

@@ -1,3 +1,4 @@
 {
-    "svn.ignoreMissingSvnWarning": true
+    "svn.ignoreMissingSvnWarning": true,
+    "cil.server.path": "${workspaceFolder}/artifacts/langserver/cil-langserver.dll"
 }
