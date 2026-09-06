@@ -16,6 +16,7 @@ Behaviour is selected by the value in `AL`:
 | `0x02` | Write string     | Writes a string to standard output. `X` holds the start address in RAM; `B` holds the length in bytes.               |
 | `0x03` | Read character   | Reads one character from standard input and stores it in `AH`.                                                       |
 | `0x04` | Read line        | Reads a line from standard input. Bytes are stored starting at the address in `X`; `B` is set to the length read.    |
+| `0x05` | Write integer    | Writes the 16-bit **unsigned** value of `B` to standard output as decimal ASCII. See the limitation noted below.     |
 
 ### Examples
 
@@ -48,6 +49,23 @@ MOV X,  0x0300
 KEI 0x01
 ; B now contains the number of bytes read
 ```
+
+**Write register `BL`/`BH` as a decimal integer:**
+```
+MOV AL, 0x05
+MOV B,  42
+KEI 0x01
+; prints "42"
+```
+
+`AL = 0x05` reads `B` (the 16-bit composite of `BL`/`BH`, 0–65535) as an
+**unsigned** value — there is no sign bit to interpret, and no 32-bit form
+reading `X` or `Y`. It cannot print a negative number or a value outside
+0–65535. A caller needing a full-range signed 32-bit integer printed has to
+write its own conversion (see how the [cacalang](https://github.com/Arawn-Davies/cacalang)
+CacaVM backend's `__print_int` does it, entirely by hand, for exactly this
+reason) — this is the standard library's real limitation, not a missing
+convenience.
 
 ---
 
