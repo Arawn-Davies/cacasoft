@@ -538,13 +538,22 @@ public sealed class CilEmitter
             _slots[parameters[i]] = -4 * i;
         }
 
+        // Reserve every local's storage in one PSHN instead of one PSH 0 per
+        // byte: the runtime effect (SP moves down by the combined width,
+        // every reserved byte zeroed) is identical either way, since nothing
+        // reads memory between one local's reservation and the next — only
+        // the compile-time _depth bookkeeping below needs to walk locals one
+        // at a time, to record each one's address at its own cumulative
+        // depth.
+        _reservedSlotCount = locals.Sum(l => l.Width);
+        if (_reservedSlotCount > 0)
+        {
+            Line($"PSHN 0x{_reservedSlotCount * 4:X}");
+        }
+
         foreach (var (local, width) in locals)
         {
-            for (var i = 0; i < width; i++)
-            {
-                _depth += 4;
-                Line("PSH 0"); Line("PSH 0"); Line("PSH 0"); Line("PSH 0");
-            }
+            _depth += width * 4;
 
             // A multi-slot buffer's recorded address is that of its LAST
             // (lowest-address) 4-byte unit, i.e. byte 0 of the buffer — every
@@ -552,8 +561,6 @@ public sealed class CilEmitter
             // byte-0..byte-N layout EmitReadInt needs.
             _slots[local] = _depth;
         }
-
-        _reservedSlotCount = locals.Sum(l => l.Width);
         EmitStatements(body);
 
         if (isFunctionBody)
@@ -563,12 +570,12 @@ public sealed class CilEmitter
         }
     }
 
-    /// <summary>Pops every reserved local, in one instruction per byte — the exact inverse of the prologue.</summary>
+    /// <summary>Deallocates every reserved local in one POPN — the exact inverse of the prologue's PSHN.</summary>
     private void EmitEpilogue(int slotCount)
     {
-        for (var i = 0; i < slotCount; i++)
+        if (slotCount > 0)
         {
-            Line("POP X"); Line("POP X"); Line("POP X"); Line("POP X");
+            Line($"POPN 0x{slotCount * 4:X}");
         }
 
         _depth -= 4 * slotCount;
@@ -1060,11 +1067,15 @@ public sealed class CilEmitter
 
         Line($"CLL func_{call.Name}");
 
-        for (var i = 0; i < call.Arguments.Count; i++)
+        // Discard the pushed arguments in one POPN — X was only ever a
+        // scratch destination here (nothing downstream reads it), so
+        // POPN's "throw the bytes away, touch no register" semantics are
+        // an exact match for what the unrolled POP X loop actually did.
+        if (call.Arguments.Count > 0)
         {
-            Line("POP X"); Line("POP X"); Line("POP X"); Line("POP X");
-            _depth -= 4;
+            Line($"POPN 0x{call.Arguments.Count * 4:X}");
         }
+        _depth -= 4 * call.Arguments.Count;
 
         // The callee leaves its result in Y before RET; a void call's Y is
         // simply never read by the caller.

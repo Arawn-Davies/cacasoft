@@ -132,13 +132,22 @@ AST and binding types without the compiler depending on it back. Only
 
 CacaVM's instruction set forced a real design problem the other backends
 never meet: five registers, only two of them (`X`, `Y`) wide enough for a
-32-bit `int`; every memory and stack access one byte at a time; and no
-frame-pointer register to spare, since expression evaluation already needs
-both wide registers free. Locals and parameters are therefore addressed
-relative to the *current* stack pointer using an offset the emitter tracks at
-compile time as it walks the tree (`_depth`) — the same technique a
-stack-machine compiler uses to track operand-stack depth — and every 32-bit
-value crossing memory or the stack is packed and unpacked four bytes by hand.
+32-bit `int`; every memory access and every byte of *data* crossing the
+stack one byte at a time; and no frame-pointer register to spare, since
+expression evaluation already needs both wide registers free. Locals and
+parameters are therefore addressed relative to the *current* stack pointer
+using an offset the emitter tracks at compile time as it walks the tree
+(`_depth`) — the same technique a stack-machine compiler uses to track
+operand-stack depth — and every 32-bit value crossing memory or the stack is
+packed and unpacked four bytes by hand. Reserving and releasing that
+stack space is the one exception: `PSHN`/`POPN` (added to CacaVM's ISA
+specifically for this backend — see CacaVM's `Spec-Instructions.md` §6.5)
+zero-fill or discard an arbitrary byte count in a single instruction, so a
+function's locals are reserved and released without one `PSH 0`/`POP` per
+byte — the emitter used to do exactly that, and for a function with a
+`read_int` scratch buffer (see below) it dominated the emitted code: 256 of
+FizzBuzz's ~270 stack-setup instructions were that one buffer's
+zero-initialization, now a single `PSHN`.
 `CilEmitter.cs`'s own remarks describe the register discipline this requires
 in full; getting it wrong is exactly what a wrong-byte-order argument, a
 clobbered scratch register, or a branch condition backwards look like, and all
