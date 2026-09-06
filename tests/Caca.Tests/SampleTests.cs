@@ -128,4 +128,29 @@ public class SampleTests
                 "Who said sit down?!!!!!"),
             output.ToString());
     }
+
+    [Fact]
+    public void CacaVmShowcase_sample_runs()
+    {
+        var compilation = Compilation.CreateFromFile(TestHost.SamplePath("cacavm_showcase.caca"));
+        Assert.True(compilation.Succeeded, string.Join(Environment.NewLine, compilation.FormatDiagnostics()));
+
+        var output = new StringWriter { NewLine = "\n" };
+        compilation.Run(new StringReader("3\n4\n"), output);
+
+        Assert.Equal(
+            TestHost.Lines(
+                "-- arithmetic, comparisons, bool logic --",
+                "22", "12", "85", "3", "2", "-2", "2", "-2147483648",
+                "true", "true", "false", "true", "true", "false", "true", "true", "true",
+                "-- if/else --", "-1", "0", "1",
+                "-- while, break, continue --", "16",
+                "-- for, break, continue --", "40",
+                "-- recursion --", "720", "0", "1", "1", "2", "3", "5", "8", "13", "21",
+                "-- mutual recursion --", "true", "false",
+                "-- early return from a nested loop --", "7", "-1",
+                "-- read_int --", "7", "3",
+                "-- done --"),
+            output.ToString());
+    }
 }

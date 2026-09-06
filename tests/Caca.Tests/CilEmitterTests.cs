@@ -343,4 +343,18 @@ public class CilEmitterTests : IDisposable
         const string input = "1\n2\n3\n-1\n-2\n9\n4\n4\n";
         Assert.Equal(TestHost.Run(source, input) + "Halting!\n", RunCacaVm(source, input));
     }
+
+    /// <summary>
+    /// The full showcase sample — arithmetic, comparisons, bool logic,
+    /// if/else-if chains, while/for with break and continue, recursion,
+    /// mutual recursion, an early return from a loop nested in a function,
+    /// and read_int — through the actual VM, matching the interpreter.
+    /// </summary>
+    [CacaVmFact]
+    public void CacaVm_backend_matches_the_interpreter_on_the_showcase_sample()
+    {
+        var source = File.ReadAllText(TestHost.SamplePath("cacavm_showcase.caca"));
+        const string input = "3\n4\n";
+        Assert.Equal(TestHost.Run(source, input) + "Halting!\n", RunCacaVm(source, input));
+    }
 }

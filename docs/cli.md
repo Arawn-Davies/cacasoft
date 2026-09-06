@@ -98,9 +98,14 @@ QEMU, with no operating system involved at any point.
 virtual machine — instead of an assembly:
 
 ```sh
-caca build samples/primes.caca --target cacavm -o primes.cil
-dotnet Caca.VM.Cli.dll primes.cil
+caca build samples/cacavm_showcase.caca --target cacavm -o showcase.cil
+dotnet Caca.VM.Cli.dll showcase.cil
 ```
+
+(`samples/primes.caca` is not a valid example here: it prints strings built at
+runtime, which this target rejects — see `CACA0028` below.
+`samples/cacavm_showcase.caca` is written for exactly this target's v1
+subset.)
 
 This is a fourth backend, and the only one that does not live inside
 `Caca.Compiler` — it depends on the compiler's public types, but the compiler

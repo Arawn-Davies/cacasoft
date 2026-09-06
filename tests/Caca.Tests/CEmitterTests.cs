@@ -214,6 +214,19 @@ public class CEmitterTests : IDisposable
             EmitC(source, SampleTests.ToolkitSession));
     }
 
+    /// <summary>
+    /// cacavm_showcase.caca uses nothing the C backend rejects (it was
+    /// written for CacaVM's narrower v1 subset, which every other backend
+    /// covers too), so it is held to the same parity standard here.
+    /// </summary>
+    [CcFact]
+    public void C_backend_matches_the_interpreter_on_the_cacavm_showcase_sample()
+    {
+        var source = File.ReadAllText(TestHost.SamplePath("cacavm_showcase.caca"));
+        const string input = "3\n4\n";
+        Assert.Equal(TestHost.Run(source, input), EmitC(source, input));
+    }
+
     [Fact]
     public void C_target_rejects_extern_functions()
     {

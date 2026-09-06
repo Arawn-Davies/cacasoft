@@ -1,0 +1,129 @@
+// cacavm_showcase.caca
+//
+// A section-by-section tour of every construct the CacaVM backend supports
+// (caca build --target cacavm) -- the cacalang-side counterpart to CacaVM's
+// own examples/all_features.cil. Deliberately avoids float, extern func, and
+// any string operation beyond a literal print: this target rejects all
+// three (CACA0026-CACA0028), so a program meant to actually run on CacaVM
+// cannot use them. See docs/architecture.md's "The CacaVM backend" section.
+
+print "-- arithmetic, comparisons, bool logic --";
+var a = 17;
+var b = 5;
+print a + b;
+print a - b;
+print a * b;
+print a / b;
+print a % b;
+print -a % b;
+print a % -b;
+print 2147483647 + 1;
+print a == 17;
+print a != b;
+print a < b;
+print a <= 17;
+print a > b;
+print a >= 18;
+print (a > b) && (b > 0);
+print (a < b) || (b > 0);
+print !(a == b);
+
+print "-- if/else --";
+func classify(n: int): int do
+    if n < 0 then
+        return -1;
+    else if n == 0 then
+        return 0;
+    else
+        return 1;
+    end;
+end
+print classify(-5);
+print classify(0);
+print classify(5);
+
+print "-- while, break, continue --";
+var i = 1;
+var sum = 0;
+while i <= 10 do
+    if i % 2 == 0 then
+        i = i + 1;
+        continue;
+    end;
+    if i > 7 then
+        break;
+    end;
+    sum = sum + i;
+    i = i + 1;
+end;
+print sum;
+
+print "-- for, break, continue --";
+var product = 1;
+for j = 1 to 10 do
+    if j > 5 then
+        break;
+    end;
+    if j == 3 then
+        continue;
+    end;
+    product = product * j;
+end;
+print product;
+
+print "-- recursion --";
+func factorial(n: int): int do
+    if n < 2 then
+        return 1;
+    end;
+    return n * factorial(n - 1);
+end
+print factorial(6);
+
+func fib(n: int): int do
+    if n < 2 then
+        return n;
+    end;
+    return fib(n - 1) + fib(n - 2);
+end
+for k = 0 to 8 do
+    print fib(k);
+end;
+
+print "-- mutual recursion --";
+func isEven(n: int): bool do
+    if n == 0 then
+        return true;
+    end;
+    return isOdd(n - 1);
+end
+func isOdd(n: int): bool do
+    if n == 0 then
+        return false;
+    end;
+    return isEven(n - 1);
+end
+print isEven(10);
+print isOdd(10);
+
+print "-- early return from a nested loop --";
+func firstMultiple(of: int, limit: int): int do
+    for n = 1 to limit do
+        if n % of == 0 then
+            return n;
+        end;
+    end;
+    return -1;
+end
+print firstMultiple(7, 100);
+print firstMultiple(7, 5);
+
+print "-- read_int --";
+var x = 0;
+var y = 0;
+read_int x;
+read_int y;
+print x + y;
+print firstMultiple(x, 100);
+
+print "-- done --";
