@@ -318,7 +318,7 @@ internal static class Program
     private static int BuildCacaVm(Compilation compilation, string sourcePath, string? outputPath)
     {
         outputPath ??= Path.ChangeExtension(Path.GetFileName(sourcePath), ".cil");
-        var diagnostics = CilEmitter.Emit(compilation.Program, compilation.Functions, out var text);
+        var diagnostics = CilEmitter.Emit(compilation.Program, compilation.Functions, out var text, out var lineMap);
 
         if (diagnostics.Count > 0)
         {
@@ -333,6 +333,17 @@ internal static class Program
         }
 
         File.WriteAllText(outputPath, text);
+
+        // A plain-text sidecar, not embedded in the .cil itself: a debugger
+        // that only shells out to this CLI (no in-process reference to
+        // Caca.CilBackend — see CilEmitter.Emit's own remarks on who can call
+        // it directly) still needs this map, so it has to be a file the CLI
+        // writes, not a value only an in-process caller could read. One
+        // "<byteOffset> <sourceLine>" pair per line, ascending byte offset —
+        // deliberately not JSON, so reading it needs nothing beyond a split.
+        var lineMapPath = outputPath + ".linemap";
+        File.WriteAllLines(lineMapPath, lineMap.Select(e => $"{e.ByteOffset} {e.SourceLine}"));
+
         Console.WriteLine($"Compiled {compilation.FileName} to {outputPath}");
         Console.WriteLine($"Run it with a CacaVM host, e.g.: dotnet Caca.VM.Cli.dll {outputPath}");
         return ExitSuccess;
