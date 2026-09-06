@@ -13,13 +13,15 @@ speaks it can offer the same features.
 
 ## Visual Studio Code
 
-[`editors/vscode`](../editors/vscode) is an extension that uses the server.
-Its [README](../editors/vscode/README.md) has the install steps; in short:
+[`editors/vscode`](../editors/vscode) is an extension that uses the server —
+and CIL's, CacaVM's assembly language, if a CacaVM checkout is also
+available: one extension, two languages, each started independently. Its
+[README](../editors/vscode/README.md) has the install steps; in short:
 
 ```sh
 dotnet publish src/Caca.LanguageServer -c Release -o artifacts/langserver
 cd editors/vscode && npm install && npx @vscode/vsce package
-code --install-extension cacalang-0.2.0.vsix
+code --install-extension cacalang-0.3.0.vsix
 ```
 
 The repository's `.vscode` folder is set up to match: settings pointing at that
