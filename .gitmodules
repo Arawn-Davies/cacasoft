@@ -1,6 +1,6 @@
-[submodule "Artemis-IL"]
-	path = Artemis-IL
-	url = https://github.com/Arawn-Davies/CacaVM
 [submodule "cacalang"]
 	path = cacalang
 	url = https://github.com/Arawn-Davies/cacalang
+[submodule "CacaVM"]
+	path = CacaVM
+	url = https://github.com/Arawn-Davies/CacaVM
