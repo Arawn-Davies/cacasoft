@@ -1,0 +1,134 @@
+{
+  "name": "cacalang",
+  "displayName": "cacalang & CIL",
+  "description": "Language support for cacalang (live errors, hover types, go to definition) and CIL, the CacaVM intermediate language (live errors, syntax highlighting).",
+  "version": "0.3.0",
+  "publisher": "cacalang",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Arawn-Davies/cacalang.git",
+    "directory": "editors/vscode"
+  },
+  "engines": {
+    "vscode": "^1.75.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "main": "./client.js",
+  "activationEvents": [
+    "onLanguage:caca",
+    "onLanguage:cil"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "caca",
+        "aliases": [
+          "cacalang",
+          "caca"
+        ],
+        "extensions": [
+          ".caca"
+        ],
+        "configuration": "./caca-language-configuration.json"
+      },
+      {
+        "id": "cil",
+        "aliases": [
+          "CIL",
+          "cil"
+        ],
+        "extensions": [
+          ".cil"
+        ],
+        "configuration": "./cil-language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "caca",
+        "scopeName": "source.caca",
+        "path": "./syntaxes/caca.tmLanguage.json"
+      },
+      {
+        "language": "cil",
+        "scopeName": "source.cil",
+        "path": "./syntaxes/cil.tmLanguage.json"
+      }
+    ],
+    "configuration": [
+      {
+        "title": "cacalang",
+        "properties": {
+          "cacalang.server.path": {
+            "type": "string",
+            "default": "",
+            "description": "Path to the caca-langserver executable. Leave empty to use 'caca-langserver' from PATH."
+          },
+          "cacalang.references": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "default": [],
+            "description": "Paths to .NET assemblies extern functions may bind to, as passed to the CLI with --ref. ${workspaceFolder} is expanded. Read at startup: reload the window after changing this or building a listed assembly."
+          }
+        }
+      },
+      {
+        "title": "CIL",
+        "properties": {
+          "cil.server.path": {
+            "type": "string",
+            "default": "",
+            "description": "Path to the cil-langserver executable, from CacaVM (github.com/Arawn-Davies/CacaVM) — a separate repository this extension does not vendor. Leave empty to use 'cil-langserver' from PATH."
+          }
+        }
+      }
+    ],
+    "problemMatchers": [
+      {
+        "name": "caca",
+        "owner": "caca",
+        "fileLocation": [
+          "autoDetect",
+          "${workspaceFolder}"
+        ],
+        "pattern": {
+          "regexp": "^(.*)\\((\\d+),(\\d+)\\): (error|warning) (\\w+): (.*)$",
+          "file": 1,
+          "line": 2,
+          "column": 3,
+          "severity": 4,
+          "code": 5,
+          "message": 6
+        }
+      },
+      {
+        "name": "cil",
+        "owner": "cil",
+        "fileLocation": [
+          "autoDetect",
+          "${workspaceFolder}"
+        ],
+        "pattern": {
+          "regexp": "^(.*)\\((\\d+),(\\d+)\\): (error|warning) (\\w+): (.*)$",
+          "file": 1,
+          "line": 2,
+          "column": 3,
+          "severity": 4,
+          "code": 5,
+          "message": 6
+        }
+      }
+    ]
+  },
+  "dependencies": {
+    "vscode-languageclient": "^9.0.1"
+  },
+  "extensionKind": [
+    "workspace"
+  ]
+}
