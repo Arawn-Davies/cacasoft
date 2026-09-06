@@ -15,6 +15,17 @@ namespace Caca.VM.Studio
         {
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
+
+            using (var splash = new SplashForm())
+            {
+                splash.Show();
+                while (!splash.IsFinished)
+                {
+                    Application.DoEvents();
+                    System.Threading.Thread.Sleep(15);
+                }
+            }
+
             Application.Run(new MainForm());
         }
     }

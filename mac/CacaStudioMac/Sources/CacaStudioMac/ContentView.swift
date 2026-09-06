@@ -1,99 +1,98 @@
 import SwiftUI
 import CacaVMKit
 
-private let defaultSource = """
-; Caca Studio (macOS) — CIL editor
-; Assemble and run with the buttons above, or Cmd-R.
-
-JMP main
-hello:
-DB "Hello, World", 0x0A, 0x00
-main:
-MOV AL, 0x02
-MOV X, hello
-MOV BL, 13
-KEI 0x01
-KEI 0x02
-"""
-
+/// The main IDE window — a SwiftUI port of Caca.VM.Studio's MainForm:
+/// toolbar, line-numbered/syntax-highlighted editor, colour-coded output
+/// pane, and a status bar. File/Build menu commands live in
+/// CacaStudioMacApp's `.commands`; this view just renders the document and
+/// exposes the same actions via toolbar buttons.
 struct ContentView: View {
-    @State private var source = defaultSource
-    @State private var output = ""
-    @State private var isRunning = false
+    @EnvironmentObject var appState: AppState
+    @Environment(\.openWindow) private var openWindow
 
     var body: some View {
         VSplitView {
-            editor
-            consolePane
+            CodeEditorView(text: $appState.source) { line, column in
+                appState.statusLine = line
+                appState.statusColumn = column
+            }
+            .onChange(of: appState.source) { _ in appState.modified = true }
+            .frame(minHeight: 260)
+
+            outputPane
+                .frame(minHeight: 140)
         }
         .toolbar {
             ToolbarItemGroup {
-                Button("Run", systemImage: "play.fill", action: run)
-                    .disabled(isRunning)
-                    .keyboardShortcut("r", modifiers: .command)
-                Button("Clear Output", systemImage: "trash", action: { output = "" })
+                Button("New", systemImage: "doc") { appState.newDocument() }
+                Button("Open…", systemImage: "folder") { appState.open() }
+                Button("Save", systemImage: "square.and.arrow.down") { appState.save() }
+                Divider()
+                Button("Compile", systemImage: "hammer") { appState.compile() }
+                    .disabled(appState.isRunning)
+                Button("Compile & Run", systemImage: "play.fill") { appState.compileAndRun() }
+                    .disabled(appState.isRunning)
+                Button("Debug", systemImage: "ladybug") { appState.openDebugger(openWindow: openWindow) }
+                    .disabled(appState.isRunning)
+                Divider()
+                Button("Decompile…", systemImage: "doc.text.magnifyingglass") { appState.openAndDecompile() }
+                Divider()
+                Button("About", systemImage: "info.circle") { appState.showingAbout = true }
             }
         }
-        .frame(minWidth: 700, minHeight: 500)
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            statusBar
+        }
+        .sheet(isPresented: $appState.showingAbout) { AboutView() }
+        .frame(minWidth: 900, minHeight: 640)
     }
 
-    private var editor: some View {
-        TextEditor(text: $source)
-            .font(.system(.body, design: .monospaced))
-            .frame(minHeight: 260)
-    }
-
-    private var consolePane: some View {
+    private var outputPane: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text("Console")
+            Text("  Output")
                 .font(.caption)
                 .foregroundStyle(.secondary)
-                .padding(.horizontal, 8)
                 .padding(.top, 4)
-            ScrollView {
-                Text(output.isEmpty ? " " : output)
-                    .font(.system(.body, design: .monospaced))
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .textSelection(.enabled)
-                    .padding(8)
-            }
+            OutputConsoleView(segments: appState.output)
         }
-        .frame(minHeight: 140)
-        .background(Color(nsColor: .textBackgroundColor))
+        .background(Color(nsColor: .init(red: 0x25 / 255, green: 0x25 / 255, blue: 0x26 / 255, alpha: 1)))
     }
 
-    private func run() {
-        isRunning = true
-        output = ""
-        let console = LiveConsole { text in
-            DispatchQueue.main.async { output += text }
+    private var statusBar: some View {
+        HStack {
+            Text(appState.statusFileText).font(.caption).foregroundStyle(.secondary)
+            Spacer()
+            Text("Ln \(appState.statusLine), Col \(appState.statusColumn)")
+                .font(.caption)
+                .foregroundStyle(.secondary)
         }
-
-        DispatchQueue.global(qos: .userInitiated).async {
-            defer { DispatchQueue.main.async { isRunning = false } }
-            do {
-                let code = try Assembler.assemble(source)
-                let vm = VM(program: code, ramSize: 1_048_576, console: console)
-                try vm.run()
-            } catch {
-                DispatchQueue.main.async { output += "\n✗ \(error)\n" }
-            }
-        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 3)
+        .background(.thinMaterial)
     }
 }
 
-/// Streams output to a callback as it's produced, rather than buffering it —
-/// so long-running programs show output incrementally instead of all at once
-/// when they halt.
-private final class LiveConsole: CacaConsole {
-    private let onOutput: (String) -> Void
-    init(onOutput: @escaping (String) -> Void) { self.onOutput = onOutput }
-    func write(_ text: String) { onOutput(text) }
-    func writeLine(_ text: String) { onOutput(text + "\n") }
-    func read() throws -> UInt8 { throw CacaVMError.unknownInterrupt(command: -1) }
-    func readLine() throws -> String { throw CacaVMError.unknownInterrupt(command: -1) }
+private struct AboutView: View {
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        VStack(spacing: 12) {
+            Text("Caca Studio").font(.title2).bold()
+            Text("IDE for Caca Intermediate Language & cacalang\nAssembler · Decompiler · Debugger")
+                .multilineTextAlignment(.center)
+                .foregroundStyle(.secondary)
+            Text("Swift · SwiftUI · No external dependencies")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Button("OK") { dismiss() }
+                .keyboardShortcut(.defaultAction)
+                .padding(.top, 8)
+        }
+        .padding(24)
+        .frame(width: 360)
+    }
 }
 
 #Preview {
-    ContentView()
+    ContentView().environmentObject(AppState())
 }
