@@ -19,7 +19,7 @@ public sealed class CacaVmFactAttribute : FactAttribute
         if (CilEmitterTests.CacaVmCliPath is null)
         {
             Skip = "no CacaVM CLI build was found (set CACAVM_CLI to its Caca.VM.Cli.dll, " +
-                   "or build ../CacaVM or ../Artemis-IL alongside this repo)";
+                   "or build ../CacaVM alongside this repo)";
         }
     }
 }
@@ -32,7 +32,7 @@ public sealed class CacaVmTheoryAttribute : TheoryAttribute
         if (CilEmitterTests.CacaVmCliPath is null)
         {
             Skip = "no CacaVM CLI build was found (set CACAVM_CLI to its Caca.VM.Cli.dll, " +
-                   "or build ../CacaVM or ../Artemis-IL alongside this repo)";
+                   "or build ../CacaVM alongside this repo)";
         }
     }
 }
@@ -78,9 +78,8 @@ public class CilEmitterTests : IDisposable
     /// (github.com/Arawn-Davies/CacaVM) this one does not vendor, so there is
     /// no fixed relative path that works for every checkout: an explicit
     /// <c>CACAVM_CLI</c> environment variable wins if set, otherwise this
-    /// looks for a sibling checkout named either <c>CacaVM</c> (the current
-    /// name) or <c>Artemis-IL</c> (the name it was renamed from — plenty of
-    /// existing local clones still use it), built Release or Debug.
+    /// looks for a sibling checkout named <c>CacaVM</c>, built Release or
+    /// Debug.
     /// </summary>
     private static string? FindCacaVmCli()
     {
@@ -105,18 +104,15 @@ public class CilEmitterTests : IDisposable
             return null;
         }
 
-        foreach (var siblingName in new[] { "CacaVM", "Artemis-IL" })
+        foreach (var configuration in new[] { "Release", "Debug" })
         {
-            foreach (var configuration in new[] { "Release", "Debug" })
-            {
-                var candidate = Path.Combine(
-                    repoParent.FullName, siblingName, "source", "Caca.VM.Cli", "bin", configuration,
-                    "net10.0", "Caca.VM.Cli.dll");
+            var candidate = Path.Combine(
+                repoParent.FullName, "CacaVM", "source", "Caca.VM.Cli", "bin", configuration,
+                "net10.0", "Caca.VM.Cli.dll");
 
-                if (File.Exists(candidate))
-                {
-                    return candidate;
-                }
+            if (File.Exists(candidate))
+            {
+                return candidate;
             }
         }
 
