@@ -110,10 +110,12 @@ CacaVM has no floating point unit and no instructions for it, so `--target
 cacavm` rejects any program using `float` (`CACA0027`), the same way `extern
 func` is rejected for having no CLR to call into (`CACA0026`). A `string` may
 only appear as the literal, direct operand of `print` — not as a variable,
-parameter, return value, or in a comparison or concatenation (`CACA0028`) —
-and `read_int`/`read_string` are rejected outright (`CACA0029`): there is no
-integer-parsing or line-input routine yet. Every program that survives these
-restrictions is held to the same parity standard as the other backends.
+parameter, return value, or in a comparison or concatenation (`CACA0028`).
+`read_int` reads a line via CacaVM's standard library and parses it with its
+`atoi`; `read_string` is still rejected (`CACA0029`) — there is no
+string-input routine yet, and `string` cannot be a variable on this target
+regardless. Every program that survives these restrictions is held to the
+same parity standard as the other backends.
 
 ## Referencing a C# assembly
 

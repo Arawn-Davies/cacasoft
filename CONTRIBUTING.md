@@ -29,8 +29,8 @@ order:
    `Emit/CRuntime.cs` if the feature needs the outside world.
 7. **The CacaVM emitter**, in `src/Caca.CilBackend/CilEmitter.cs` — unless the
    feature falls outside the v1 subset that backend covers (`float`, anything
-   with `string` beyond a literal print, `read_int`/`read_string`), in which
-   case reject it there with its own diagnostic instead, the way `extern func`
+   with `string` beyond a literal print, `read_string`), in which case reject
+   it there with its own diagnostic instead, the way `extern func`
    already is.
 8. **Tests**: the behaviour through the interpreter, the errors it can produce,
    and the same programs through the emitters.

@@ -59,7 +59,7 @@ These come from what the program means.
 | `CACA0026` | An extern function in a program compiled with `--target cacavm`, which has no CLR to call. |
 | `CACA0027` | `float` used anywhere in a program compiled with `--target cacavm` — CacaVM has no floating point unit or instructions for one. |
 | `CACA0028` | A `string` used as anything other than the literal, direct operand of `print`, in a program compiled with `--target cacavm`. |
-| `CACA0029` | `read_int` or `read_string` in a program compiled with `--target cacavm` — no integer-parsing or line-input routine exists yet. |
+| `CACA0029` | `read_string` in a program compiled with `--target cacavm` — no string-input routine exists, and `string` cannot be a variable on this target regardless. `read_int` is not rejected; it is implemented. |
 
 `CACA0019` is decided by asking whether a statement returns on every path: a
 `return` does, a block does if any statement in it does, and an `if` does if it

@@ -39,13 +39,16 @@ namespace Caca.CilBackend;
 /// v1 scope, deliberately: no <c>float</c> (CIL has no floating point unit or
 /// opcodes at all — this is not an oversight to fix later so much as a
 /// separate project), no <c>extern func</c> (no CLR under CIL), no
-/// <c>read_int</c>/<c>read_string</c> (no integer-parsing routine exists yet),
-/// and <c>string</c> may only appear as the literal, direct operand of a
-/// <c>print</c> statement — no string variables, parameters, return values,
-/// comparisons or concatenation. Each is rejected with its own diagnostic,
-/// the same way <see cref="CEmitter"/> rejects <c>extern func</c>. Arrays do
-/// not exist in the source language at all, so they are not a v1/later split;
-/// nothing here restricts them, there is simply nothing to restrict.
+/// <c>read_string</c> (no string-input routine exists), and <c>string</c> may
+/// only appear as the literal, direct operand of a <c>print</c> statement —
+/// no string variables, parameters, return values, comparisons or
+/// concatenation. Each is rejected with its own diagnostic, the same way
+/// <see cref="CEmitter"/> rejects <c>extern func</c>. <c>read_int</c> IS
+/// supported — see <see cref="EmitReadInt"/> — now that CacaVM's standard
+/// library has an atoi (SWI 0x01, AL=0x04); it did not when this backend was
+/// first written. Arrays do not exist in the source language at all, so they
+/// are not a v1/later split; nothing here restricts them, there is simply
+/// nothing to restrict.
 ///
 /// It must agree with the other backends on every program the v1 subset
 /// allows; the parity tests run its output through the actual CacaVM and
@@ -70,6 +73,16 @@ public sealed class CilEmitter
     /// counter is read for anything outside that construct.
     /// </summary>
     private int _depth;
+
+    /// <summary>
+    /// Total 4-byte slots reserved for the CURRENT function or top level —
+    /// every named local plus, if it contains a <c>read_int</c>, the shared
+    /// read buffer. Set once, right after the prologue reserves them, and
+    /// read by both the auto-appended epilogue at the body's true end and by
+    /// every early <c>return</c>'s epilogue: a single source of truth, rather
+    /// than each recomputing it (and risking disagreeing) from <see cref="_slots"/>.
+    /// </summary>
+    private int _reservedSlotCount;
 
     /// <summary>
     /// Slot offsets for the current function's parameters and locals, keyed
@@ -193,12 +206,12 @@ public sealed class CilEmitter
 
                 break;
 
-            case ReadStatement read:
+            case ReadStatement read when read.Type == CacaType.String:
                 diagnostics.Report(
                     DiagnosticCode.ReadNotAvailableInCacaVm,
                     read.Location,
-                    "this target has no integer-parsing or string-input routine yet, so 'read_int'/'read_string' " +
-                    "are not available");
+                    "this target has no string-input routine yet, so 'read_string' is not available " +
+                    "(read_int is — CacaVM's atoi covers it)");
 
                 break;
 
@@ -410,7 +423,7 @@ public sealed class CilEmitter
 
     /// <summary>Every local a function body declares, in the order <see cref="EmitFunctionBody"/> reserves slots.</summary>
     /// <remarks>Mirrors <see cref="CEmitter"/>'s CollectLocals, plus one synthetic slot per <c>for</c> loop's bound.</remarks>
-    private static void CollectLocals(Statement statement, List<string> locals)
+    private static void CollectLocals(Statement statement, List<(string Name, int Width)> locals)
     {
         switch (statement)
         {
@@ -423,16 +436,16 @@ public sealed class CilEmitter
                 break;
 
             case VariableDeclaration declaration:
-                locals.Add(declaration.Name);
+                locals.Add((declaration.Name, 1));
                 break;
 
             case ForStatement loop:
                 if (loop.DeclaresVariable)
                 {
-                    locals.Add(loop.Name);
+                    locals.Add((loop.Name, 1));
                 }
 
-                locals.Add(ForBoundSlot(loop));
+                locals.Add((ForBoundSlot(loop), 1));
                 CollectLocals(loop.Body, locals);
                 break;
 
@@ -452,15 +465,53 @@ public sealed class CilEmitter
         }
     }
 
-    private static List<string> CollectLocals(Statement body)
+    /// <summary>
+    /// Every local this body needs slots for, plus — if it contains at least
+    /// one <c>read_int</c> — one <see cref="ReadBufferWidth"/>-slot scratch
+    /// buffer shared by all of them (reads happen one at a time, each fully
+    /// consumed before the next, so there is nothing to gain from a separate
+    /// buffer per call site).
+    /// </summary>
+    private static List<(string Name, int Width)> CollectLocals(Statement body)
     {
-        var locals = new List<string>();
+        var locals = new List<(string Name, int Width)>();
         CollectLocals(body, locals);
+
+        if (ContainsReadInt(body))
+        {
+            locals.Add((ReadBufferSlot, ReadBufferWidth));
+        }
+
         return locals;
     }
 
+    private static bool ContainsReadInt(Statement statement) => statement switch
+    {
+        ReadStatement { Type: CacaType.Int } => true,
+        BlockStatement block => block.Statements.Any(ContainsReadInt),
+        ForStatement loop => ContainsReadInt(loop.Body),
+        IfStatement conditional => ContainsReadInt(conditional.ThenBranch)
+            || (conditional.ElseBranch is not null && ContainsReadInt(conditional.ElseBranch)),
+        WhileStatement loop => ContainsReadInt(loop.Body),
+        _ => false,
+    };
+
     /// <summary>The hidden local a for-loop's upper bound is evaluated into once, up front.</summary>
     private static string ForBoundSlot(ForStatement loop) => $"<for@{loop.Location.Start}>bound";
+
+    /// <summary>
+    /// The scratch buffer <c>read_int</c> reads a line into before parsing it.
+    /// 256 bytes (64 four-byte slots) is generous for any realistic integer
+    /// input; <see cref="EmitReadInt"/> clamps the read length to the buffer's
+    /// size before null-terminating it, so a pathological line longer than
+    /// this is truncated, not a memory-safety problem — the standard
+    /// library's own KEI 0x01/AL=0x04 has no bounds check of its own against
+    /// a destination buffer's size, so this clamp is this emitter's
+    /// responsibility, not something to assume happens downstream.
+    /// </summary>
+    private const string ReadBufferSlot = "<readbuf>";
+
+    private const int ReadBufferWidth = 64;
 
     private void EmitFunctionBody(FunctionSymbol function)
     {
@@ -472,7 +523,8 @@ public sealed class CilEmitter
     /// Emits a function body, or the top level, as a prologue (reserve locals),
     /// the statements, and an epilogue (deallocate locals, then RET or halt).
     /// </summary>
-    private void EmitBody(BlockStatement body, bool isFunctionBody, List<string> locals, IReadOnlyList<string> parameters)
+    private void EmitBody(
+        BlockStatement body, bool isFunctionBody, List<(string Name, int Width)> locals, IReadOnlyList<string> parameters)
     {
         _depth = 0;
         _slots.Clear();
@@ -486,31 +538,40 @@ public sealed class CilEmitter
             _slots[parameters[i]] = -4 * i;
         }
 
-        foreach (var local in locals)
+        foreach (var (local, width) in locals)
         {
-            _depth += 4;
+            for (var i = 0; i < width; i++)
+            {
+                _depth += 4;
+                Line("PSH 0"); Line("PSH 0"); Line("PSH 0"); Line("PSH 0");
+            }
+
+            // A multi-slot buffer's recorded address is that of its LAST
+            // (lowest-address) 4-byte unit, i.e. byte 0 of the buffer — every
+            // later unit sits at a higher address, exactly the ascending
+            // byte-0..byte-N layout EmitReadInt needs.
             _slots[local] = _depth;
-            Line("PSH 0"); Line("PSH 0"); Line("PSH 0"); Line("PSH 0");
         }
 
+        _reservedSlotCount = locals.Sum(l => l.Width);
         EmitStatements(body);
 
         if (isFunctionBody)
         {
-            EmitEpilogue(locals.Count);
+            EmitEpilogue(_reservedSlotCount);
             Line("RET");
         }
     }
 
     /// <summary>Pops every reserved local, in one instruction per byte — the exact inverse of the prologue.</summary>
-    private void EmitEpilogue(int localCount)
+    private void EmitEpilogue(int slotCount)
     {
-        for (var i = 0; i < localCount; i++)
+        for (var i = 0; i < slotCount; i++)
         {
             Line("POP X"); Line("POP X"); Line("POP X"); Line("POP X");
         }
 
-        _depth -= 4 * localCount;
+        _depth -= 4 * slotCount;
     }
 
     // -------------------------------------------------------------- statements
@@ -574,13 +635,17 @@ public sealed class CilEmitter
                 // see the same _depth it would have seen had this return not
                 // been here at all — restore it once the RET is emitted.
                 var depthBeforeReturn = _depth;
-                EmitEpilogue(_slots.Values.Count(v => v > 0));
+                EmitEpilogue(_reservedSlotCount);
                 Line("RET");
                 _depth = depthBeforeReturn;
                 break;
 
             case CallStatement call:
                 EmitExpression(call.Call);
+                break;
+
+            case ReadStatement read:
+                EmitReadInt(read.Name);
                 break;
 
             case BreakStatement:
@@ -620,6 +685,48 @@ public sealed class CilEmitter
         {
             Line("CLL __print_int");
         }
+    }
+
+    /// <summary>
+    /// <c>read_int</c>: reads a line into the body's shared read buffer (see
+    /// <see cref="ReadBufferSlot"/>), clamps the REPORTED length to the
+    /// buffer's actual size before trusting it for anything, null-terminates
+    /// at that (possibly clamped) point, then hands the buffer to the
+    /// standard library's own atoi (SWI 0x01, AL=0x04) and stores the result.
+    ///
+    /// The clamp bounds where THIS code writes the terminator; it does not
+    /// bound what KEI 0x01/AL=0x04 itself already wrote before this code ever
+    /// ran. That interrupt takes no maximum-length parameter at all — it
+    /// writes every byte of whatever line the console produced, however long,
+    /// starting at X — so a line longer than the buffer has already
+    /// overwritten whatever memory follows it by the time control reaches
+    /// here. This is a real, open gap inherited from the standard library,
+    /// not one this emitter can close from CIL: a genuine fix needs
+    /// KEI 0x01/AL=0x04 itself to take a maximum length and stop there.
+    /// </summary>
+    private void EmitReadInt(string name)
+    {
+        SlotAddressIntoX(ReadBufferSlot);
+        Line("MOV AL, 0x04");
+        Line("KEI 0x01"); // reads a line into [X, X+B); B = bytes actually read — unbounded, see above
+
+        Line("MOV Y, B");
+        Line($"MOV X, {ReadBufferWidth * 4 - 1}");
+        Line("TMT Y, X");
+
+        var clampLabel = MakeLabel("readint_clamp");
+        Line($"JMF {clampLabel}");
+        Line($"MOV Y, {ReadBufferWidth * 4 - 1}");
+        Line($"{clampLabel}:");
+
+        SlotAddressIntoX(ReadBufferSlot); // recompute: clobbered by the clamp check above
+        Line("ADD X, Y");
+        Line("MOM 0, X"); // null-terminate, always within the buffer's bounds
+
+        SlotAddressIntoX(ReadBufferSlot);
+        Line("MOV AL, 0x04");
+        Line("SWI 0x01"); // Y = parsed integer
+        StoreSlot(name);
     }
 
     private void EmitIf(IfStatement conditional)

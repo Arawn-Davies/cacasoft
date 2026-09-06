@@ -152,11 +152,23 @@ three: CacaVM has no floating point unit or instructions for one at all, so
 having no CLR to call into (`CACA0026`). A `string` may only appear as the
 literal, direct operand of `print` (`CACA0028`) — not as a variable,
 parameter, return value, or in a comparison or concatenation — and
-`read_int`/`read_string` are rejected outright (`CACA0029`), since no
-integer-parsing or line-input routine exists yet. Everything else — control
-flow, recursion, arithmetic with the same 32-bit wraparound as the other
-backends, `%` synthesized from `/` and `*` since CacaVM has no MOD opcode —
-is held to the same parity standard as the rest of the language.
+`read_string` is rejected outright (`CACA0029`), since no string-input
+routine exists and `string` cannot be a variable on this target regardless.
+
+`read_int` **is** implemented (`Emit/CilEmitter.cs`'s `EmitReadInt`): it reads
+a line into a 256-byte scratch buffer reserved once per function (shared
+across every `read_int` in that function, since reads happen one at a time)
+and hands it to CacaVM's own `atoi` (added to CacaVM's standard library for
+exactly this). One gap is inherited, not created, by this: CacaVM's
+line-read interrupt takes no maximum-length parameter, so a line longer than
+the buffer has already overwritten adjacent memory by the time this emitter's
+own length clamp ever runs — closing that needs a bound added to the
+interrupt itself, on CacaVM's side, not something reachable from CIL.
+
+Everything else — control flow, recursion, arithmetic with the same 32-bit
+wraparound as the other backends, `%` synthesized from `/` and `*` since
+CacaVM has no MOD opcode — is held to the same parity standard as the rest of
+the language.
 
 ## The backends must agree
 

@@ -266,14 +266,13 @@ public class CilEmitterTests : IDisposable
     }
 
     [Fact]
-    public void CacaVm_target_rejects_read_statements()
+    public void CacaVm_target_rejects_read_string()
     {
-        var compilation = Compilation.Create("var n = 0; read_int n; print n;");
+        var compilation = Compilation.Create("""var s = ""; read_string s; print s;""");
         Assert.True(compilation.Succeeded);
 
         var diagnostics = CilEmitter.Emit(compilation.Program, compilation.Functions, out var text);
-        var error = Assert.Single(diagnostics);
-        Assert.Equal(DiagnosticCode.ReadNotAvailableInCacaVm, error.Code);
+        Assert.Contains(diagnostics, d => d.Code == DiagnosticCode.ReadNotAvailableInCacaVm);
         Assert.Empty(text);
     }
 
@@ -283,5 +282,65 @@ public class CilEmitterTests : IDisposable
         Assert.Equal(
             "hi\ntrue\nfalse\n-2147483648\nHalting!\n",
             RunCacaVm("""print "hi"; print true; print false; print -2147483647 - 1;"""));
+    }
+
+    // ── read_int — now that CacaVM's standard library has an atoi ────────────
+
+    [CacaVmTheory]
+    [InlineData("var n = 0; read_int n; print n; print n + 1;", "7\n")]
+    [InlineData("var n = 0; read_int n; print n;", "-42\n")]
+    public void CacaVm_backend_read_int_matches_the_interpreter(string source, string input)
+    {
+        Assert.Equal(TestHost.Run(source, input) + "Halting!\n", RunCacaVm(source, input));
+    }
+
+    /// <summary>read_int inside a function, called more than once — a fresh read each time, sharing one buffer.</summary>
+    [CacaVmFact]
+    public void CacaVm_backend_read_int_inside_a_function_called_twice()
+    {
+        const string source = """
+            func doubleIt(): int do
+                var n = 0;
+                read_int n;
+                return n * 2;
+            end
+            print doubleIt();
+            print doubleIt();
+            """;
+        const string input = "5\n10\n";
+        Assert.Equal(TestHost.Run(source, input) + "Halting!\n", RunCacaVm(source, input));
+    }
+
+    /// <summary>
+    /// read_int inside a for loop's body (its own local, alongside the loop's
+    /// own locals), and inside a for loop nested in a function with an early
+    /// return — the exact shape that caught the _depth-leak regression this
+    /// suite already guards against, now with a read buffer sharing the same
+    /// reserved-slot bookkeeping.
+    /// </summary>
+    [CacaVmFact]
+    public void CacaVm_backend_read_int_inside_loops_matches_the_interpreter()
+    {
+        const string source = """
+            var total = 0;
+            for i = 1 to 3 do
+                var n = 0;
+                read_int n;
+                total = total + n;
+            end;
+            print total;
+
+            func firstPositive(limit: int): int do
+                for i = 1 to limit do
+                    var n = 0;
+                    read_int n;
+                    if n > 0 then return n; end;
+                end;
+                return -1;
+            end
+            print firstPositive(5);
+            """;
+        const string input = "1\n2\n3\n-1\n-2\n9\n4\n4\n";
+        Assert.Equal(TestHost.Run(source, input) + "Halting!\n", RunCacaVm(source, input));
     }
 }
