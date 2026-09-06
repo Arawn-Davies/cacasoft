@@ -81,8 +81,22 @@ namespace Caca.VM.Decompiler
                 case 0x21: // POP
                     return $"{name} {Registers.GetName(p1b)}";
 
-                // Single operand – register or value (PSH, JMP, CLL, JMT, JMF, CLT, CLF)
+                // Single operand – register or a one-byte literal (PSH pushes
+                // exactly one byte, so truncating p2 to a byte here is correct,
+                // not a bug).
                 case 0x20: // PSH
+                    if (mode == AddressMode.RegisterRegister || mode == AddressMode.RegisterValue)
+                        return $"{name} {Registers.GetName(p1b)}";
+                    return $"{name} 0x{(byte)p2:X2}";
+
+                // Single operand – register or a jump target address. Jump
+                // targets are byte offsets into the whole program, routinely
+                // >255 in anything but a toy program; this used to share
+                // PSH's "0x{(byte)p2:X2}" truncating format above, silently
+                // wrapping any target past 0xFF and printing the wrong
+                // address (harmless to the VM itself, which reads the
+                // untruncated param2 — this only ever corrupted what the
+                // decompiler and debugger's live view displayed).
                 case 0x10: // JMP
                 case 0x11: // CLL
                 case 0x13: // JMT
@@ -91,7 +105,7 @@ namespace Caca.VM.Decompiler
                 case 0x18: // CLF
                     if (mode == AddressMode.RegisterRegister || mode == AddressMode.RegisterValue)
                         return $"{name} {Registers.GetName(p1b)}";
-                    return $"{name} 0x{(byte)p2:X2}";
+                    return $"{name} 0x{p2:X4}";
 
                 // Single value operand (interrupt commands stored in p1b)
                 case 0x2A: // SWI

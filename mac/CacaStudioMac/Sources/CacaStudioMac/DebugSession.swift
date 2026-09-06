@@ -297,9 +297,11 @@ final class DebugSession: ObservableObject {
         case 0x06, 0x07, 0x0E, 0x0F: operands = "\(R(p1b)), \(p2)"
         case 0x3A: operands = "\(Rx(p1b)), 0x\(String(format: "%04X", UInt32(bitPattern: p2)))"
         case 0x3B: operands = "\(R(p1b)), 0x\(String(format: "%04X", UInt32(bitPattern: p2)))"
-        case 0x20, 0x10, 0x11, 0x13, 0x14, 0x17, 0x18:
+        case 0x20: // PSH — pushes exactly one byte, so truncating p2 is correct
             operands = (mode == 0 || mode == 2) ? R(p1b) : "0x\(String(format: "%02X", UInt8(truncatingIfNeeded: p2)))"
-        case 0x22, 0x23: // PSHN POPN — not the bucket above: counts can exceed 255
+        case 0x10, 0x11, 0x13, 0x14, 0x17, 0x18: // JMP CLL JMT JMF CLT CLF — full address, not a byte
+            operands = (mode == 0 || mode == 2) ? R(p1b) : "0x\(String(format: "%04X", UInt32(bitPattern: p2)))"
+        case 0x22, 0x23: // PSHN POPN — not the PSH case above: counts can exceed 255
             operands = (mode == 0 || mode == 2) ? R(p1b) : "0x\(String(format: "%X", UInt32(bitPattern: p2)))"
         default:
             operands = mode == 0 ? "\(R(p1b)), \(R(p2b0))" : "\(R(p1b)), 0x\(String(format: "%02X", UInt8(truncatingIfNeeded: p2)))"

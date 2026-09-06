@@ -134,15 +134,27 @@ public enum Decompiler {
         case 0x08, 0x09, 0x0D, 0x21: // INC DEC NOT POP
             return "\(name) \(reg(p1b))"
 
-        case 0x20, 0x10, 0x11, 0x13, 0x14, 0x17, 0x18: // PSH JMP CLL JMT JMF CLT CLF
+        case 0x20: // PSH — pushes exactly one byte, so truncating p2 is correct
             if mode == .regReg || mode == .regVal {
                 return "\(name) \(reg(p1b))"
             }
             return "\(name) 0x\(String(format: "%02X", UInt8(truncatingIfNeeded: p2)))"
 
-        case 0x22, 0x23: // PSHN POPN — deliberately not the PSH/JMP bucket
-            // above: a reservation count can exceed 255, so the literal-count
-            // case must print the full 32-bit p2, not p2 truncated to a byte.
+        case 0x10, 0x11, 0x13, 0x14, 0x17, 0x18: // JMP CLL JMT JMF CLT CLF
+            // Jump targets are byte offsets into the whole program, routinely
+            // >255 in anything but a toy program — this used to share PSH's
+            // byte-truncating format above, silently wrapping any target
+            // past 0xFF. The VM itself reads the untruncated p2 and was
+            // never affected; only the decompiled/debugger text was wrong.
+            if mode == .regReg || mode == .regVal {
+                return "\(name) \(reg(p1b))"
+            }
+            return "\(name) 0x\(String(format: "%04X", UInt32(bitPattern: p2)))"
+
+        case 0x22, 0x23: // PSHN POPN — deliberately not PSH's byte-truncating
+            // case above: a reservation count can exceed 255, so the
+            // literal-count case must print the full 32-bit p2, not p2
+            // truncated to a byte.
             if mode == .regReg || mode == .regVal {
                 return "\(name) \(reg(p1b))"
             }

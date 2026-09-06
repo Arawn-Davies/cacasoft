@@ -372,8 +372,10 @@ namespace Caca.VM.Studio
                 0x06 or 0x07 or 0x0E or 0x0F => $"{R(p1b)}, {p2}",          // SHL SHR ROL ROR
                 0x3A => $"{Rx(p1b)}, 0x{p2:X4}",                             // MOM
                 0x3B => $"{R(p1b)}, 0x{p2:X4}",                              // MOE
-                0x20 or 0x10 or 0x11 or 0x13 or 0x14 or 0x17 or 0x18 =>    // PSH JMP CLL JMT JMF CLT CLF
+                0x20 =>                                                      // PSH — pushes one byte, so truncating is correct
                     (mode == 0 || mode == 2) ? R(p1b) : $"0x{(byte)p2:X2}",
+                0x10 or 0x11 or 0x13 or 0x14 or 0x17 or 0x18 =>            // JMP CLL JMT JMF CLT CLF — full address, not a byte
+                    (mode == 0 || mode == 2) ? R(p1b) : $"0x{p2:X4}",
                 0x22 or 0x23 =>                                             // PSHN POPN — full 32-bit count, not truncated to a byte
                     (mode == 0 || mode == 2) ? R(p1b) : $"0x{p2:X}",
                 _ =>

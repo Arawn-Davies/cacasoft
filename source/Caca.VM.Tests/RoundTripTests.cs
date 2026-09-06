@@ -193,6 +193,54 @@ KEI 0x02
         }
 
         /// <summary>
+        /// Regression for the JMP/CLL/JMT/JMF/CLT/CLF decompiler truncation bug: a
+        /// jump target's real byte offset (780, 0x30C) is chosen so its low byte
+        /// (0x0C) collides with the offset of a "wrong" label 12 bytes into the
+        /// program. Before the fix, a literal jump target was rendered through the
+        /// same byte-truncating format as PSH's own one-byte literal
+        /// (<c>0x{(byte)p2:X2}</c>), so decompiling this program and recompiling the
+        /// result would silently retarget the jump at "wrong" instead of "target" —
+        /// the VM's execution of the ORIGINAL bytecode was never affected (it reads
+        /// p2 untruncated); only what the decompiler produced, and hence what
+        /// recompiling that text produces, was wrong.
+        ///
+        /// The filler between "wrong" and "target" is 125 real (never-executed —
+        /// the unconditional JMP skips clean over all of it) MOV instructions, not
+        /// raw zero bytes: a run of zero bytes decodes as opcode 0x00, which the
+        /// decompiler treats as "end of program" and stops at, silently dropping
+        /// "target"'s own instructions from the decompiled text — a genuine but
+        /// separate decompiler limitation (it can't tell zeroed data from the end
+        /// of the program) that would otherwise make this test fail for a reason
+        /// that has nothing to do with the bug it's meant to catch.
+        /// </summary>
+        [Fact]
+        public void JumpTargetPast255Bytes_FunctionalRoundTripOutputMatches()
+        {
+            string filler = string.Concat(Enumerable.Repeat("MOV AL, 0x01\n", 125));
+            string source = $@"
+MOV AL, 0x01
+JMP target
+wrong:
+MOV AH, 'N'
+KEI 0x01
+KEI 0x02
+{filler}target:
+MOV AH, 'Y'
+KEI 0x01
+KEI 0x02
+";
+            byte[] original   = Compile(source);
+            string decompiled = Decompile(original);
+            byte[] roundTrip  = Compile(decompiled);
+
+            string output1 = Execute(original);
+            string output2 = Execute(roundTrip);
+
+            Assert.Equal("YHalting!\n", output1);
+            Assert.Equal(output1, output2);
+        }
+
+        /// <summary>
         /// Decompiled output must be non-empty and contain the standard header comment.
         /// </summary>
         [Fact]
