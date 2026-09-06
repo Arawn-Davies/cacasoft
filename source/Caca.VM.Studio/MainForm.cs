@@ -656,7 +656,7 @@ namespace Caca.VM.Studio
 
         /// <summary>
         /// Walks up from the running assembly's own directory looking for
-        /// "Artemis-IL" (this repo's own folder name), then checks that
+        /// this repo's own folder name, "CacaVM", then checks that
         /// directory's sibling ../cacalang/samples — the same sibling-
         /// checkout convention used everywhere else cacalang and CacaVM
         /// discover each other (see this project's own CACALANG_SUPPORT
@@ -667,7 +667,7 @@ namespace Caca.VM.Studio
             var dir = new DirectoryInfo(AppContext.BaseDirectory);
             while (dir != null)
             {
-                if (string.Equals(dir.Name, "Artemis-IL", StringComparison.Ordinal))
+                if (string.Equals(dir.Name, "CacaVM", StringComparison.Ordinal))
                 {
                     string candidate = Path.Combine(dir.Parent?.FullName ?? "", "cacalang", "samples");
                     return Directory.Exists(candidate) ? candidate : null;
@@ -733,7 +733,7 @@ namespace Caca.VM.Studio
                 Filter      = isCacalang
                     ? "cacalang Source (*.caca)|*.caca|All files (*.*)|*.*"
                     : "CIL Source (*.cil)|*.cil|Assembly (*.asm)|*.asm|All files (*.*)|*.*",
-                DefaultExt = isCacalang ? "caca" : "ail",
+                DefaultExt = isCacalang ? "caca" : "cil",
                 FileName   = string.IsNullOrEmpty(_filePath)
                     ? (isCacalang ? "program.caca" : "program")
                     : Path.GetFileName(_filePath),
@@ -764,7 +764,7 @@ namespace Caca.VM.Studio
                 {
                     Title      = "Save compiled binary",
                     Filter     = "CacaVM binary (*.ilc)|*.ilc|All files (*.*)|*.*",
-                    DefaultExt = "ila",
+                    DefaultExt = "ilc",
                     FileName   = string.IsNullOrEmpty(_filePath)
                         ? "output"
                         : Path.GetFileNameWithoutExtension(_filePath),

@@ -16,7 +16,7 @@ final class ConformanceTests: XCTestCase {
             .deletingLastPathComponent() // Tests
             .deletingLastPathComponent() // CacaStudioMac
             .deletingLastPathComponent() // mac
-            .deletingLastPathComponent() // Artemis-IL (repo root)
+            .deletingLastPathComponent() // CacaVM (repo root)
             .appendingPathComponent("conformance/cases")
     }
 

@@ -33,7 +33,7 @@ enum CacalangCompiler {
     static func findSamplesDir() -> URL? {
         var dir = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
         while dir.pathComponents.count > 1 {
-            if dir.lastPathComponent == "Artemis-IL" {
+            if dir.lastPathComponent == "CacaVM" {
                 let candidate = dir.deletingLastPathComponent()
                     .appendingPathComponent("cacalang/samples")
                 var isDirectory: ObjCBool = false
@@ -54,11 +54,11 @@ enum CacalangCompiler {
             return FileManager.default.fileExists(atPath: url.path) ? url : nil
         }
 
-        // Walk up from this source file to the repo root (Artemis-IL), then
+        // Walk up from this source file to the repo root (CacaVM), then
         // look for a sibling `cacalang` checkout's built CLI.
         var dir = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
         while dir.pathComponents.count > 1 {
-            if dir.lastPathComponent == "Artemis-IL" {
+            if dir.lastPathComponent == "CacaVM" {
                 let cacalangRoot = dir.deletingLastPathComponent().appendingPathComponent("cacalang")
                 let candidates = [
                     cacalangRoot.appendingPathComponent("src/Caca.Cli/bin/Debug/net10.0/caca.dll"),
