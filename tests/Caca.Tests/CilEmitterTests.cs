@@ -357,4 +357,34 @@ public class CilEmitterTests : IDisposable
         const string input = "3\n4\n";
         Assert.Equal(TestHost.Run(source, input) + "Halting!\n", RunCacaVm(source, input));
     }
+
+    /// <summary>
+    /// Three of the general-purpose samples — written for the language as a
+    /// whole, not for this target specifically — happen to already stay
+    /// inside CacaVM's v1 subset. Confirmed by actually running them on the
+    /// VM, not assumed from the fact that they compile.
+    /// </summary>
+    [CacaVmFact]
+    public void CacaVm_backend_matches_the_interpreter_on_the_helloworld_sample()
+    {
+        var source = File.ReadAllText(TestHost.SamplePath("helloworld.caca"));
+        const string input = "7\n";
+        Assert.Equal(TestHost.Run(source, input) + "Halting!\n", RunCacaVm(source, input));
+    }
+
+    [CacaVmFact]
+    public void CacaVm_backend_matches_the_interpreter_on_the_loop_sample()
+    {
+        var source = File.ReadAllText(TestHost.SamplePath("loop.caca"));
+        const string input = "2\n";
+        Assert.Equal(TestHost.Run(source, input) + "Halting!\n", RunCacaVm(source, input));
+    }
+
+    [CacaVmFact]
+    public void CacaVm_backend_matches_the_interpreter_on_the_fizzbuzz_sample()
+    {
+        var source = File.ReadAllText(TestHost.SamplePath("fizzbuzz.caca"));
+        const string input = "20\n";
+        Assert.Equal(TestHost.Run(source, input) + "Halting!\n", RunCacaVm(source, input));
+    }
 }
