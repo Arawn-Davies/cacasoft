@@ -34,15 +34,23 @@ enum SyntaxHighlighting {
     private static let rxDecimal = try! NSRegularExpression(pattern: #"(?<!\w)\d+(?!\w)"#)
     private static let rxCharLit = try! NSRegularExpression(pattern: #"'(\\.|[^\\'])'"#)
 
+    static let editorFont = NSFont.monospacedSystemFont(ofSize: 10, weight: .regular)
+
     /// Re-colours the whole string in place. CIL programs are tiny (a few
     /// hundred lines at most), so a full re-highlight on every keystroke is
     /// simpler and just as fast as the C# editor's 250ms-debounced version.
+    ///
+    /// The baseline pass MUST set `.font` alongside `.foregroundColor`:
+    /// `NSMutableAttributedString.setAttributes(_:range:)` replaces the
+    /// entire attribute dictionary for that range, not just the keys given —
+    /// omitting `.font` here silently strips it from the whole document on
+    /// every keystroke, and a font-less run renders no glyphs at all.
     static func apply(to storage: NSTextStorage) {
         let text = storage.string as NSString
         guard text.length > 0 else { return }
 
         storage.beginEditing()
-        storage.setAttributes([.foregroundColor: defaultColor], range: NSRange(location: 0, length: text.length))
+        storage.setAttributes([.foregroundColor: defaultColor, .font: editorFont], range: NSRange(location: 0, length: text.length))
 
         colour(rxCharLit, text, number, storage)
         colour(rxDecimal, text, number, storage)

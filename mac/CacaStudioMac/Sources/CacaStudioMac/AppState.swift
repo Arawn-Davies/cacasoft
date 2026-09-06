@@ -49,6 +49,13 @@ final class AppState: ObservableObject {
     /// source it came from. Mirrors MainForm.cs's `_sourceCacaPath`.
     @Published var sourceCacaPath: URL?
 
+    /// Set by loadExample — there's no file on disk to name the document
+    /// after, so without this the title bar falls through to "Untitled"
+    /// for every example, indistinguishable from a genuinely blank
+    /// document. Cleared by anything that gives the document a real
+    /// identity instead (New, Open, Decompile, openCacalang).
+    @Published var loadedExampleName: String?
+
     /// Kept alive here so ARC doesn't drop it the moment WindowAccessor's
     /// closure returns — see ConfirmCloseDelegate in ContentView.swift.
     var windowCloseDelegate: NSObject?
@@ -64,18 +71,30 @@ final class AppState: ObservableObject {
     // MARK: - Title / status, mirrors MainForm.SetTitle
 
     var windowTitle: String {
+        let mark = modified ? "● " : ""
         if let sourceCacaPath, filePath == nil {
-            return (modified ? "● " : "") + sourceCacaPath.lastPathComponent + " (compiled to CIL)"
+            return mark + sourceCacaPath.lastPathComponent + " (compiled to CIL)"
         }
-        let name = filePath?.lastPathComponent ?? "Untitled"
-        return (modified ? "● " : "") + name
+        if let filePath {
+            return mark + filePath.lastPathComponent
+        }
+        if let loadedExampleName {
+            return mark + loadedExampleName + " (example)"
+        }
+        return mark + "Untitled"
     }
 
     var statusFileText: String {
         if let sourceCacaPath, filePath == nil {
             return "compiled from \(sourceCacaPath.path)"
         }
-        return filePath?.path ?? "New file"
+        if let filePath {
+            return filePath.path
+        }
+        if let loadedExampleName {
+            return "example: \(loadedExampleName)"
+        }
+        return "New file"
     }
 
     // MARK: - File operations, mirrors MainForm's New/Open/Save/SaveAs
@@ -96,6 +115,7 @@ final class AppState: ObservableObject {
         source = defaultSource
         filePath = nil
         sourceCacaPath = nil
+        loadedExampleName = nil
         modified = false
         lastBuild = []
         clearOutput()
@@ -120,6 +140,7 @@ final class AppState: ObservableObject {
             source = try String(contentsOf: url, encoding: .utf8)
             filePath = url
             sourceCacaPath = nil
+            loadedExampleName = nil
             modified = false
             lastBuild = []
         } catch {
@@ -146,6 +167,7 @@ final class AppState: ObservableObject {
         appendOutput("✓ Compiled to CIL.\n", .success)
         source = result.cilSource ?? ""
         filePath = nil
+        loadedExampleName = nil
         modified = false
         lastBuild = []
         sourceCacaPath = path
@@ -183,6 +205,7 @@ final class AppState: ObservableObject {
         clearOutput()
         source = example.source
         modified = false
+        loadedExampleName = example.rawValue
     }
 
     private func cilContentTypes() -> [UTType] {
@@ -275,6 +298,7 @@ final class AppState: ObservableObject {
             source = asm
             filePath = nil
             sourceCacaPath = nil
+            loadedExampleName = nil
             modified = false
             clearOutput()
             appendOutput("✓ Decompiled \(bytes.count) byte(s) from \(url.lastPathComponent)\n", .success)

@@ -13,11 +13,12 @@ struct ContentView: View {
 
     var body: some View {
         VSplitView {
-            CodeEditorView(text: $appState.source) { line, column in
+            CodeEditorView(text: $appState.source, onCursorMove: { line, column in
                 appState.statusLine = line
                 appState.statusColumn = column
-            }
-            .onChange(of: appState.source) { appState.modified = true }
+            }, onEdit: {
+                appState.modified = true
+            })
             .frame(minHeight: 260)
 
             outputPane
