@@ -1,0 +1,20 @@
+; Register-indirect MOM/MOE, proven genuinely indirect (not just a second
+; flavor of immediate) by addressing two different locations from two
+; different runtime values of the same register, then printing both back —
+; expressed via observable output, not internal register inspection, so this
+; case works the same way for any conforming engine.
+MOV X, 0x60
+MOV AL, 'A'
+MOM AL, X
+MOV X, 0x70
+MOV AL, 'B'
+MOM AL, X
+MOV X, 0x60
+MOE AH, X
+MOV AL, 0x01
+KEI 0x01
+MOV X, 0x70
+MOE AH, X
+MOV AL, 0x01
+KEI 0x01
+KEI 0x02

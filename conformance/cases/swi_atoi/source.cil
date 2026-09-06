@@ -1,0 +1,19 @@
+JMP main
+pos:
+DB "42", 0x00
+neg:
+DB "-17", 0x00
+main:
+MOV AL, 0x04
+MOV X, pos
+SWI 0x01
+MOV X, Y
+MOV AL, 0x06
+KEI 0x01
+MOV AL, 0x04
+MOV X, neg
+SWI 0x01
+MOV X, Y
+MOV AL, 0x06
+KEI 0x01
+KEI 0x02

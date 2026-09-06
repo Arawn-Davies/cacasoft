@@ -1,0 +1,9 @@
+JMP main
+hello:
+DB "Hello, World", 0x0A, 0x00
+main:
+MOV AL, 0x02
+MOV X, hello
+MOV BL, 13
+KEI 0x01
+KEI 0x02

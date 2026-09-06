@@ -1,0 +1,10 @@
+JMP main
+sub:
+MOV AL, 0x01
+MOV AH, 'A'
+KEI 0x01
+RET
+main:
+CLL sub
+CLL sub
+KEI 0x02

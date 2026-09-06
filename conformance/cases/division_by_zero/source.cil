@@ -1,0 +1,4 @@
+MOV X, 1
+MOV Y, 0
+DIV X, Y
+KEI 0x02
