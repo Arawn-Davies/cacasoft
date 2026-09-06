@@ -72,6 +72,7 @@ The `/examples` folder contains ready-to-assemble `.cil` programs:
 | `hello_world_db.cil` | Prints "Hello, World" using the `DB` pseudo-instruction and the write-string interrupt |
 | `calculator.cil` | Demonstrates arithmetic instructions and integer output |
 | `stdlib_demo.cil` | Signed 32-bit integer output, `atoi`, and `strcmp` — the standard library's newer additions |
+| `all_features.cil` | A section-by-section tour of every implemented instruction and standard library routine — the file to read alongside the wiki |
 
 Open any `.cil` file in Caca Studio to assemble, run, and step-debug it interactively.
 

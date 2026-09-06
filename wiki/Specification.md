@@ -368,6 +368,13 @@ sequenceDiagram
 
 ### 6.6 I/O
 
+> **Not implemented yet.** All six opcodes below assemble and execute without
+> error, but the reference VM currently treats every one of them as a no-op —
+> they advance past the instruction and touch nothing else: no port is read,
+> no register or memory is written. This is reserved encoding space for a
+> future port-I/O model, not a working feature with an unlisted limitation;
+> do not rely on any of them until this notice is removed.
+
 #### INB — Receive Byte `0x24`
 | | |
 |-|-|

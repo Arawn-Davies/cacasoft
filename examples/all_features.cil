@@ -1,0 +1,348 @@
+; all_features.cil
+;
+; A guided tour of CIL: one section per instruction category, each printing
+; something so a failure is easy to localise. Not a stress test — a readable
+; walkthrough, meant to be read alongside wiki/Spec-Instructions.md and
+; wiki/Standard-Library.md while running it.
+;
+; Deliberately excludes INB/INW/IND/OUB/OUW/OUD (port I/O): the reference VM
+; currently implements all six as no-ops (see the notice in
+; wiki/Spec-Instructions.md §6.6) — demonstrating "it doesn't crash" would
+; misrepresent a feature that does nothing yet.
+;
+; Also excludes KEI 0x01 AL=0x03/0x04 (read character/line): this example
+; runs unattended and prints a fixed, checkable sequence: it would either
+; block waiting for stdin or print unpredictable content, either way
+; defeating the point of a walkthrough with known output.
+
+        JMP     main
+
+; ── Data section ──────────────────────────────────────────────────────────────
+msg_mov:
+        DB      "-- MOV/SWP --", 0x0A, 0x00
+msg_arith:
+        DB      "-- Arithmetic (ADD/SUB/INC/DEC/MUL/DIV) --", 0x0A, 0x00
+msg_bitwise:
+        DB      "-- Bitwise (SHL/SHR/ROL/ROR/AND/BOR/XOR/NOT) --", 0x0A, 0x00
+msg_test:
+        DB      "-- Tests (TEQ/TNE/TLT/TMT) and JMT/JMF --", 0x0A, 0x00
+msg_flow:
+        DB      "-- Flow (JMP/CLL/RET/CLT/CLF) --", 0x0A, 0x00
+msg_stack:
+        DB      "-- Stack (PSH/POP) --", 0x0A, 0x00
+msg_mem:
+        DB      "-- Memory (MOM/MOE, direct and register-indirect) --", 0x0A, 0x00
+msg_io:
+        DB      "-- I/O (KEI 0x01) --", 0x0A, 0x00
+msg_swi:
+        DB      "-- Software interrupts (SWI 0x01) --", 0x0A, 0x00
+msg_done:
+        DB      "-- done --", 0x0A, 0x00
+str_a:
+        DB      "match", 0x00
+str_b:
+        DB      "match", 0x00
+str_c:
+        DB      "different", 0x00
+str_num:
+        DB      "12345", 0x00
+
+; ── Code section ──────────────────────────────────────────────────────────────
+main:
+        ; ---- MOV / SWP ----
+        MOV     AL, 0x02
+        MOV     X,  msg_mov
+        MOV     B,  14
+        KEI     0x01
+
+        MOV     X, 111
+        MOV     Y, 222
+        SWP     X, Y            ; X=222, Y=111
+        MOV     AL, 0x06
+        KEI     0x01            ; 222
+        MOV     X, Y
+        KEI     0x01            ; 111
+
+        ; ---- Arithmetic ----
+        MOV     AL, 0x02
+        MOV     X,  msg_arith
+        MOV     B,  43
+        KEI     0x01
+
+        MOV     X, 7
+        ADD     X, 5
+        MOV     AL, 0x06
+        KEI     0x01            ; 12
+        SUB     X, 20
+        KEI     0x01            ; -8
+        MOV     X, 9
+        INC     X
+        KEI     0x01            ; 10
+        DEC     X
+        DEC     X
+        KEI     0x01            ; 8
+        MOV     X, 6
+        MUL     X, 7
+        KEI     0x01            ; 42
+        DIV     X, 6
+        KEI     0x01            ; 7
+
+        ; ---- Bitwise ----
+        MOV     AL, 0x02
+        MOV     X,  msg_bitwise
+        MOV     B,  48
+        KEI     0x01
+
+        MOV     X, 1
+        SHL     X, 4
+        MOV     AL, 0x06
+        KEI     0x01            ; 16
+        SHR     X, 2
+        KEI     0x01            ; 4
+        MOV     X, 0x0F
+        ROL     X, 4
+        KEI     0x01            ; 240
+        ROR     X, 4
+        KEI     0x01            ; 15
+        MOV     X, 0x0F
+        AND     X, 0x09
+        KEI     0x01            ; 9
+        MOV     X, 0x0F
+        BOR     X, 0xF0
+        KEI     0x01            ; 255
+        MOV     X, 0xFF
+        XOR     X, 0x0F
+        KEI     0x01            ; 240
+        MOV     X, 0
+        NOT     X
+        KEI     0x01            ; -1 (all bits set, read back signed)
+
+        ; ---- Tests + JMT/JMF ----
+        MOV     AL, 0x02
+        MOV     X,  msg_test
+        MOV     B,  42
+        KEI     0x01
+
+        MOV     X, 5
+        MOV     Y, 5
+        TEQ     X, Y
+        JMT     test_eq_ok
+        JMP     test_eq_done
+test_eq_ok:
+        MOV     AL, 0x01
+        MOV     AH, '='
+        KEI     0x01
+test_eq_done:
+
+        MOV     X, 5
+        MOV     Y, 6
+        TNE     X, Y
+        JMF     test_ne_done
+        MOV     AL, 0x01
+        MOV     AH, '!'
+        KEI     0x01
+test_ne_done:
+
+        MOV     X, 3
+        MOV     Y, 9
+        TLT     X, Y
+        JMF     test_lt_done
+        MOV     AL, 0x01
+        MOV     AH, '<'
+        KEI     0x01
+test_lt_done:
+
+        MOV     X, 9
+        MOV     Y, 3
+        TMT     X, Y
+        JMF     test_mt_done
+        MOV     AL, 0x01
+        MOV     AH, '>'
+        KEI     0x01
+test_mt_done:
+        MOV     AL, 0x01
+        MOV     AH, 0x0A
+        KEI     0x01            ; "=!<>" then newline
+
+        ; ---- Flow: JMP / CLL / RET / CLT / CLF ----
+        MOV     AL, 0x02
+        MOV     X,  msg_flow
+        MOV     B,  33
+        KEI     0x01
+
+        CLL     say_hi          ; unconditional call
+        MOV     X, 1
+        MOV     Y, 1
+        TEQ     X, Y
+        CLT     say_hi          ; call-if-true: flag is true, so this runs
+        MOV     X, 1
+        MOV     Y, 2
+        TEQ     X, Y
+        CLF     say_hi          ; call-if-false: flag is false, so this runs too
+        JMP     flow_done
+say_hi:
+        MOV     AL, 0x01
+        MOV     AH, '.'
+        KEI     0x01
+        RET
+flow_done:
+        MOV     AL, 0x01
+        MOV     AH, 0x0A
+        KEI     0x01            ; "..." then newline — three calls above
+
+        ; ---- Stack: PSH / POP ----
+        MOV     AL, 0x02
+        MOV     X,  msg_stack
+        MOV     B,  22
+        KEI     0x01
+
+        MOV     X, 10
+        PSH     X
+        MOV     X, 20
+        PSH     X
+        MOV     X, 30
+        PSH     X
+        POP     Y
+        MOV     AL, 0x06
+        MOV     X, Y
+        KEI     0x01            ; 30 (LIFO: last pushed, first popped)
+        POP     Y
+        MOV     X, Y
+        KEI     0x01            ; 20
+        POP     Y
+        MOV     X, Y
+        KEI     0x01            ; 10
+
+        ; ---- Memory: MOM / MOE, direct and register-indirect ----
+        MOV     AL, 0x02
+        MOV     X,  msg_mem
+        MOV     B,  53
+        KEI     0x01
+
+        ; "Direct" mode bakes a literal address in at compile time — but a
+        ; literal address always lands inside the loaded program image
+        ; (below RAMLimit), which is read-only once the VM is running (see
+        ; wiki/Spec-Architecture.md §4: overwriting it is a fatal error, on
+        ; purpose). That makes MOM's direct mode read-only in practice too:
+        ; str_a below is exactly such a literal, read-only address.
+        MOE     AL, str_a       ; direct: read the first byte of "match"
+        MOV     AH, AL          ; save it before AL gets reused as the KEI mode selector
+        MOV     AL, 0x01
+        KEI     0x01            ; 'm'
+        MOV     AL, 0x01
+        MOV     AH, 0x0A
+        KEI     0x01
+
+        ; Register-indirect gives a genuinely WRITABLE address: compute one
+        ; a safe margin below the current stack pointer (unused stack space,
+        ; not the read-only loaded-program image), then store and load
+        ; through it.
+        MOV     X, SP
+        SUB     X, 32
+        MOV     AL, 99          ; 'c'
+        MOM     AL, X           ; store through the register
+        MOE     BL, X           ; load back through the same register
+        MOV     AL, 0x01
+        MOV     AH, BL
+        KEI     0x01            ; 'c'
+        MOV     AL, 0x01
+        MOV     AH, 0x0A
+        KEI     0x01
+
+        ; ---- I/O: KEI 0x01 write modes ----
+        MOV     AL, 0x02
+        MOV     X,  msg_io
+        MOV     B,  21
+        KEI     0x01
+
+        MOV     AL, 0x01
+        MOV     AH, 'X'
+        KEI     0x01            ; write-char
+        MOV     AL, 0x01
+        MOV     AH, 0x0A
+        KEI     0x01
+        MOV     AL, 0x02        ; write-string
+        MOV     X,  msg_done
+        MOV     B,  11
+        KEI     0x01
+        MOV     AL, 0x05        ; write unsigned 16-bit integer
+        MOV     B,  42
+        KEI     0x01
+        MOV     AL, 0x01
+        MOV     AH, 0x0A
+        KEI     0x01
+        MOV     X, -99          ; write signed 32-bit integer
+        MOV     AL, 0x06
+        KEI     0x01
+        MOV     AL, 0x01
+        MOV     AH, 0x0A
+        KEI     0x01
+
+        ; ---- Software interrupts: SWI 0x01 (strlen/strcpy/strcmp/atoi) ----
+        MOV     AL, 0x02
+        MOV     X,  msg_swi
+        MOV     B,  37
+        KEI     0x01
+
+        MOV     AL, 0x01        ; strlen
+        MOV     X,  str_a
+        SWI     0x01
+        MOV     X, B
+        MOV     AL, 0x06
+        KEI     0x01            ; 5
+        MOV     AL, 0x01
+        MOV     AH, 0x0A
+        KEI     0x01
+
+        MOV     AL, 0x02        ; strcpy: copy str_a into scratch stack space
+        MOV     X,  str_a
+        MOV     Y,  SP
+        SUB     Y,  64          ; a different offset than the MOM/MOE demo above
+        MOV     B,  6           ; 5 chars + the null terminator
+        SWI     0x01
+        MOV     AL, 0x02
+        MOV     X,  SP
+        SUB     X,  64
+        MOV     B,  5
+        KEI     0x01            ; "match"
+        MOV     AL, 0x01
+        MOV     AH, 0x0A
+        KEI     0x01
+
+        MOV     AL, 0x03        ; strcmp: equal
+        MOV     X,  str_a
+        MOV     Y,  str_b
+        SWI     0x01
+        MOV     X, B
+        MOV     AL, 0x06
+        KEI     0x01            ; 1
+        MOV     AL, 0x01
+        MOV     AH, 0x0A
+        KEI     0x01
+        MOV     AL, 0x03        ; strcmp: different
+        MOV     X,  str_a
+        MOV     Y,  str_c
+        SWI     0x01
+        MOV     X, B
+        MOV     AL, 0x06
+        KEI     0x01            ; 0
+        MOV     AL, 0x01
+        MOV     AH, 0x0A
+        KEI     0x01
+
+        MOV     AL, 0x04        ; atoi
+        MOV     X,  str_num
+        SWI     0x01
+        MOV     X, Y
+        MOV     AL, 0x06
+        KEI     0x01            ; 12345
+        MOV     AL, 0x01
+        MOV     AH, 0x0A
+        KEI     0x01
+
+        MOV     AL, 0x02
+        MOV     X,  msg_done
+        MOV     B,  11
+        KEI     0x01
+
+        KEI     0x02            ; halt
