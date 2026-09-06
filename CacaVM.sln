@@ -1,6 +1,6 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 18
-VisualStudioVersion = 18.4.11626.88 stable
+VisualStudioVersion = 18.4.11626.88
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Caca.VM", "source\Caca.VM\Caca.VM.csproj", "{F2C5086A-4D10-4A00-82B9-173D7496249E}"
 EndProject
@@ -11,6 +11,8 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Caca.VM.Tests", "source\Caca.VM.Tests\Caca.VM.Tests.csproj", "{FBF8F0E3-3890-4EDC-B94A-A8FF1A3B441B}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Caca.VM.LanguageServer", "source\Caca.VM.LanguageServer\Caca.VM.LanguageServer.csproj", "{20F70BB5-1C2C-4DAE-8CF4-7C14565A42D2}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Caca.CilBackend", "..\cacalang\src\Caca.CilBackend\Caca.CilBackend.csproj", "{4AABA444-96E1-46F5-58F0-B83AF8719FC0}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -38,6 +40,10 @@ Global
 		{20F70BB5-1C2C-4DAE-8CF4-7C14565A42D2}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{20F70BB5-1C2C-4DAE-8CF4-7C14565A42D2}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{20F70BB5-1C2C-4DAE-8CF4-7C14565A42D2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4AABA444-96E1-46F5-58F0-B83AF8719FC0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4AABA444-96E1-46F5-58F0-B83AF8719FC0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4AABA444-96E1-46F5-58F0-B83AF8719FC0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4AABA444-96E1-46F5-58F0-B83AF8719FC0}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
