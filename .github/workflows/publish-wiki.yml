@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - 'CacaVM/wiki/**'
+      - 'cacalang/docs/**'
   workflow_dispatch:
 
 jobs:
@@ -24,7 +25,13 @@ jobs:
 
           git clone "https://x-access-token:${WIKI_TOKEN}@github.com/${{ github.repository }}.wiki.git" wiki-repo
 
-          cp CacaVM/wiki/* wiki-repo/
+          # Home.md is the wiki's landing page and must stay at the repo root;
+          # everything else lives under docs/<project>/ so CacaVM and cacalang
+          # docs don't collide.
+          mkdir -p wiki-repo/docs/cacavm wiki-repo/docs/cacalang
+          cp CacaVM/wiki/*.md wiki-repo/docs/cacavm/
+          mv wiki-repo/docs/cacavm/Home.md wiki-repo/Home.md
+          cp cacalang/docs/*.md wiki-repo/docs/cacalang/
 
           cd wiki-repo
           git add .

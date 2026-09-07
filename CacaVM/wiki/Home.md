@@ -4,13 +4,29 @@ Welcome to the CIL wiki. This wiki is the normative reference for the Caca Inter
 
 ## Pages
 
+CacaVM docs live under `/docs/cacavm`:
+
 | Page | Description |
 |------|-------------|
-| [[Specification]] | CIL v2.1 specification overview and table of contents |
-| [[Spec-Architecture]] | Memory model, instruction encoding, registers, and the stack (§1–§4) |
-| [[Spec-Instructions]] | Program flow, full instruction reference, and opcode quick-reference table (§5–§7) |
-| [[Spec-Executable-Format]] | Binary `.ilc` executable file format (§8) |
-| [[Standard-Library]] | Kernel and software interrupt reference |
+| [Specification](docs/cacavm/Specification) | CIL v2.1 specification overview and table of contents |
+| [Spec-Architecture](docs/cacavm/Spec-Architecture) | Memory model, instruction encoding, registers, and the stack (§1–§4) |
+| [Spec-Instructions](docs/cacavm/Spec-Instructions) | Program flow, full instruction reference, and opcode quick-reference table (§5–§7) |
+| [Spec-Executable-Format](docs/cacavm/Spec-Executable-Format) | Binary `.ilc` executable file format (§8) |
+| [Standard-Library](docs/cacavm/Standard-Library) | Kernel and software interrupt reference |
+
+## cacalang documentation
+
+[cacalang](https://github.com/Arawn-Davies/cacalang) docs live under `/docs/cacalang`:
+
+| Page | Description |
+|------|-------------|
+| [Language](docs/cacalang/language) | A tour of the language, with examples |
+| [Grammar](docs/cacalang/grammar) | The formal specification and the semantics of each construct |
+| [Command line](docs/cacalang/cli) | `run`, `build`, `check`, the REPL, and debugging a compiled program |
+| [Editor support](docs/cacalang/editor) | The language server, and the Visual Studio Code extension |
+| [Diagnostics](docs/cacalang/diagnostics) | Every error the compiler reports, and what causes it |
+| [Architecture](docs/cacalang/architecture) | How the compiler works, stage by stage |
+| [History](docs/cacalang/history) | Where the project came from, and what changed |
 
 ## What is CIL?
 
@@ -63,20 +79,22 @@ compile-time address is read-only once the program is running.
 
 ### Build
 
+CacaVM lives at `CacaVM/` in the [cacasoft](https://github.com/Arawn-Davies/cacasoft) monorepo, built via the root solution:
+
 ```sh
-dotnet build "CacaVM.sln"
+dotnet build cacasoft.sln
 ```
 
 ### Run the tests
 
 ```sh
-dotnet test source/Caca.VM.Tests/Caca.VM.Tests.csproj
+dotnet test CacaVM/source/Caca.VM.Tests/Caca.VM.Tests.csproj
 ```
 
 ### Run the demo
 
 ```sh
-dotnet run --project source/Caca.VM.Cli
+dotnet run --project CacaVM/source/Caca.VM.Cli
 ```
 
 Prints "Hello, World!" using the built-in demo program encoded directly as CIL bytecode.
@@ -86,7 +104,7 @@ Prints "Hello, World!" using the built-in demo program encoded directly as CIL b
 The command-line runtime compiles and runs `.cil` source directly — no separate assemble step needed:
 
 ```sh
-dotnet run --project source/Caca.VM.Cli -- myprogram.cil
+dotnet run --project CacaVM/source/Caca.VM.Cli -- myprogram.cil
 ```
 
 A compile error is reported in `file(line,col): error CIL001: message` format and exits non-zero; anything else is loaded and executed as pre-compiled bytecode instead.
