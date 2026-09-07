@@ -4,6 +4,14 @@
 * text=auto
 
 ###############################################################################
+# The conformance corpus is compared byte-for-byte against VM output that is
+# always LF (see Caca.VM.Tests.TestConsole), regardless of the host OS this
+# repo is checked out on. Force LF here so core.autocrlf can't turn a
+# checkout on Windows into a spurious CRLF-vs-LF test failure.
+###############################################################################
+conformance/cases/** text eol=lf
+
+###############################################################################
 # Set default behavior for command prompt diff.
 #
 # This is need for earlier builds of msysgit that does not have it on by

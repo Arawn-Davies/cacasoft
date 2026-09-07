@@ -14,9 +14,18 @@ namespace Caca.VM.Cli
     public class CliConsole : Caca.VM.Handlers.VConsole
 	{
 		/// <inheritdoc/>
+		/// <remarks>
+		/// Writes <c>text</c> followed by a literal <c>\n</c> rather than
+		/// <see cref="Console.WriteLine(string)"/>, which appends
+		/// <see cref="Environment.NewLine"/> — "\r\n" on Windows. A CIL
+		/// program's console output must be the same on every host, the same
+		/// way the test suite's in-process console already hardcodes '\n';
+		/// this keeps the real CLI consistent with it.
+		/// </remarks>
 		public override void WriteLine(string text)
 		{
-			Console.WriteLine(text);
+			Console.Write(text);
+			Console.Write('\n');
 		}
 
 		/// <inheritdoc/>
