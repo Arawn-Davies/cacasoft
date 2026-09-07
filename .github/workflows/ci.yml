@@ -1,0 +1,83 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - 'feature/**'
+      - 'fix/**'
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  cacavm:
+    name: CacaVM (.NET 10)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore CacaVM/ci.slnf
+
+      - name: Build solution
+        run: dotnet build CacaVM/ci.slnf --no-restore --configuration Release
+
+      - name: Run tests
+        run: >
+          dotnet test CacaVM/source/Caca.VM.Tests/Caca.VM.Tests.csproj
+          --no-restore
+          --configuration Release
+          --logger "trx;LogFileName=test-results.trx"
+          --logger "console;verbosity=normal"
+          --results-directory ./test-results
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cacavm-test-results
+          path: ./test-results/test-results.trx
+
+  cacalang:
+    name: cacalang (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore
+        run: dotnet restore cacalang/ci.slnf
+
+      - name: Build
+        run: dotnet build cacalang/ci.slnf --no-restore --configuration Release
+
+      - name: Test
+        run: dotnet test cacalang/ci.slnf --no-build --configuration Release --verbosity normal
+
+      - name: Compile a sample and run the produced executable
+        shell: bash
+        working-directory: cacalang
+        run: |
+          dotnet run --project src/Caca.Cli --configuration Release --no-build -- build samples/fizzbuzz.caca
+          echo 5 | ./fizzbuzz.exe
+          test -f fizzbuzz.pdb || { echo "no symbols were written"; exit 1; }

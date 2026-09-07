@@ -5,7 +5,7 @@ on:
     branches:
       - main
     paths:
-      - 'wiki/**'
+      - 'CacaVM/wiki/**'
   workflow_dispatch:
 
 jobs:
@@ -24,7 +24,7 @@ jobs:
 
           git clone "https://x-access-token:${WIKI_TOKEN}@github.com/${{ github.repository }}.wiki.git" wiki-repo
 
-          cp wiki/* wiki-repo/
+          cp CacaVM/wiki/* wiki-repo/
 
           cd wiki-repo
           git add .

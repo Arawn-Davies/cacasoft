@@ -1,0 +1,13 @@
+{
+  "solution": {
+    "path": "..\\cacasoft.sln",
+    "projects": [
+      "cacalang\\src\\Caca.Compiler\\Caca.Compiler.csproj",
+      "cacalang\\src\\Caca.Cli\\Caca.Cli.csproj",
+      "cacalang\\src\\Caca.LanguageServer\\Caca.LanguageServer.csproj",
+      "cacalang\\src\\Caca.CilBackend\\Caca.CilBackend.csproj",
+      "cacalang\\tests\\Caca.Tests\\Caca.Tests.csproj",
+      "cacalang\\tests\\Caca.ReferenceLibrary\\Caca.ReferenceLibrary.csproj"
+    ]
+  }
+}
