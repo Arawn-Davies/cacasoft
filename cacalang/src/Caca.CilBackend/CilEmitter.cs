@@ -8,7 +8,7 @@ namespace Caca.CilBackend;
 
 /// <summary>
 /// Compiles a type-checked program to CIL assembly source, the language of the
-/// CacaVM virtual machine (github.com/Arawn-Davies/CacaVM).
+/// CacaVM virtual machine.
 /// </summary>
 /// <remarks>
 /// The fourth backend, and the only one that lives outside <c>Caca.Compiler</c>:

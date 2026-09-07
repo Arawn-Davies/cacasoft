@@ -5,9 +5,8 @@
     <AssemblyName>Caca.CilBackend</AssemblyName>
     <Description>
       A cacalang backend targeting CIL, the assembly language of the CacaVM
-      virtual machine (github.com/Arawn-Davies/CacaVM). Depends on
-      Caca.Compiler's public AST and binding types; Caca.Compiler does not
-      depend on this, or know it exists.
+      virtual machine. Depends on Caca.Compiler's public AST and binding
+      types; Caca.Compiler does not depend on this, or know it exists.
     </Description>
   </PropertyGroup>
 

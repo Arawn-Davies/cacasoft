@@ -5,12 +5,12 @@ using Caca.Diagnostics;
 namespace Caca.Tests;
 
 /// <summary>
-/// A fact that only runs where a CacaVM CLI build can be found. CacaVM
-/// (github.com/Arawn-Davies/CacaVM) is a separate project this repo does not
-/// vendor or build — see <see cref="CilEmitterTests.FindCacaVmCli"/> for
-/// where it is expected. Skipping is more honest than failing when it is
-/// not present, the same reasoning <c>CcFactAttribute</c> uses for the C
-/// backend's <c>cc</c> dependency.
+/// A fact that only runs where a CacaVM CLI build can be found. CacaVM is a
+/// sibling project this project does not build itself — see
+/// <see cref="CilEmitterTests.FindCacaVmCli"/> for where its CLI is expected.
+/// Skipping is more honest than failing when it is not present, the same
+/// reasoning <c>CcFactAttribute</c> uses for the C backend's <c>cc</c>
+/// dependency.
 /// </summary>
 public sealed class CacaVmFactAttribute : FactAttribute
 {
@@ -74,12 +74,11 @@ public class CilEmitterTests : IDisposable
     }
 
     /// <summary>
-    /// Locates a built <c>Caca.VM.Cli.dll</c>. CacaVM is a separate repo
-    /// (github.com/Arawn-Davies/CacaVM) this one does not vendor, so there is
-    /// no fixed relative path that works for every checkout: an explicit
-    /// <c>CACAVM_CLI</c> environment variable wins if set, otherwise this
-    /// looks for a sibling checkout named <c>CacaVM</c>, built Release or
-    /// Debug.
+    /// Locates a built <c>Caca.VM.Cli.dll</c>. This project does not build
+    /// CacaVM itself, so there is no guarantee it has been built yet: an
+    /// explicit <c>CACAVM_CLI</c> environment variable wins if set, otherwise
+    /// this walks up to the cacasoft repo root (marked by <c>cacasoft.sln</c>)
+    /// and looks under its <c>CacaVM/</c> directory, built Release or Debug.
     /// </summary>
     private static string? FindCacaVmCli()
     {
@@ -92,14 +91,12 @@ public class CilEmitterTests : IDisposable
 
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
 
-        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "Cacalang.sln")))
+        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "cacasoft.sln")))
         {
             directory = directory.Parent;
         }
 
-        var repoParent = directory?.Parent;
-
-        if (repoParent is null)
+        if (directory is null)
         {
             return null;
         }
@@ -107,7 +104,7 @@ public class CilEmitterTests : IDisposable
         foreach (var configuration in new[] { "Release", "Debug" })
         {
             var candidate = Path.Combine(
-                repoParent.FullName, "CacaVM", "source", "Caca.VM.Cli", "bin", configuration,
+                directory.FullName, "CacaVM", "source", "Caca.VM.Cli", "bin", configuration,
                 "net10.0", "Caca.VM.Cli.dll");
 
             if (File.Exists(candidate))

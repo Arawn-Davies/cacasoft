@@ -24,9 +24,8 @@ function loadLanguageClient() {
 /**
  * One entry per language this extension speaks LSP for. cacalang's server
  * (Caca.LanguageServer) lives in this repository; CIL's (Caca.VM.LanguageServer)
- * lives in CacaVM (github.com/Arawn-Davies/CacaVM), a separate repository this
- * extension does not vendor — see the top-level README's "Combined with CacaVM"
- * section for how the two fit together.
+ * lives in CacaVM, a sibling directory this extension does not vendor — see
+ * docs/Cacalang-VSCode-Extension.md for how the two fit together.
  */
 const LANGUAGES = [
     {

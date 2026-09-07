@@ -3,7 +3,7 @@
     "tasks": [
         {
             "label": "build: solution (Debug)",
-            "command": "dotnet build \"${workspaceFolder}/CacaVM.sln\" --configuration Debug",
+            "command": "dotnet build \"${workspaceFolder}/../cacasoft.sln\" --configuration Debug",
             "type": "shell",
             "group": { "kind": "build", "isDefault": true },
             "presentation": { "reveal": "silent" },
@@ -11,7 +11,7 @@
         },
         {
             "label": "build: solution (Release)",
-            "command": "dotnet build \"${workspaceFolder}/CacaVM.sln\" --configuration Release",
+            "command": "dotnet build \"${workspaceFolder}/../cacasoft.sln\" --configuration Release",
             "type": "shell",
             "group": "build",
             "presentation": { "reveal": "always" },
@@ -83,7 +83,7 @@
         },
         {
             "label": "clean: solution",
-            "command": "dotnet clean \"${workspaceFolder}/CacaVM.sln\"",
+            "command": "dotnet clean \"${workspaceFolder}/../cacasoft.sln\"",
             "type": "shell",
             "group": "build",
             "presentation": { "reveal": "always" },

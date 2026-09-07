@@ -5,8 +5,7 @@ on:
     branches:
       - main
     paths:
-      - 'CacaVM/wiki/**'
-      - 'cacalang/docs/**'
+      - 'docs/**'
   workflow_dispatch:
 
 jobs:
@@ -25,16 +24,15 @@ jobs:
 
           git clone "https://x-access-token:${WIKI_TOKEN}@github.com/${{ github.repository }}.wiki.git" wiki-repo
 
-          # Home.md is the wiki's landing page and must stay at the repo root;
-          # everything else lives under docs/<project>/ so CacaVM and cacalang
-          # docs don't collide.
-          mkdir -p wiki-repo/docs/cacavm wiki-repo/docs/cacalang
-          cp CacaVM/wiki/*.md wiki-repo/docs/cacavm/
-          mv wiki-repo/docs/cacavm/Home.md wiki-repo/Home.md
-          cp cacalang/docs/*.md wiki-repo/docs/cacalang/
+          # /docs is a single flat directory mirrored verbatim as the wiki's
+          # page set (Home.md included — it's just the page GitHub treats as
+          # the landing page). Clear the old tree first so pages renamed or
+          # removed from /docs don't linger.
+          find wiki-repo -mindepth 1 -maxdepth 1 -not -name '.git' -exec rm -rf {} +
+          cp docs/*.md wiki-repo/
 
           cd wiki-repo
-          git add .
+          git add -A
           if git diff --cached --quiet; then
             echo "No changes to publish."
           else

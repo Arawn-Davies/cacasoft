@@ -7,8 +7,8 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/Arawn-Davies/cacalang.git",
-    "directory": "editors/vscode"
+    "url": "https://github.com/Arawn-Davies/cacasoft.git",
+    "directory": "cacalang/editors/vscode"
   },
   "engines": {
     "vscode": "^1.75.0"
@@ -83,7 +83,7 @@
           "cil.server.path": {
             "type": "string",
             "default": "",
-            "description": "Path to the cil-langserver executable, from CacaVM (github.com/Arawn-Davies/CacaVM) — a separate repository this extension does not vendor. Leave empty to use 'cil-langserver' from PATH."
+            "description": "Path to the cil-langserver executable, from CacaVM — this extension does not vendor it. Leave empty to use 'cil-langserver' from PATH."
           }
         }
       }
